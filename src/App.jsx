@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import LoginPage from './components/auth/LoginPage'
 import SignupPage from './components/auth/SignupPage'
@@ -15,8 +15,9 @@ import './App.css'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
-function App() {
+function AppContent() {
   const { toast } = useToast()
+  const navigate = useNavigate()
   const [user, setUser] = useState(null)
 
   // Load user from cookie on mount
@@ -48,47 +49,54 @@ function App() {
     } finally {
       clearTokens()
       setUser(null)
+      navigate('/login')
     }
   }
 
   return (
+    <Routes>
+      <Route 
+        path="/login" 
+        element={
+          <PublicRoute>
+            <LoginPage onLoginSuccess={handleLogin} />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/signup" 
+        element={
+          <PublicRoute>
+            <SignupPage onSignupSuccess={handleSignup} />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/forgot-password" 
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <DashboardPage user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        } 
+      />
+      <Route path="/" element={<Navigate to="/login" />} />
+    </Routes>
+  )
+}
+
+function App() {
+  return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <Router>
-        <Routes>
-        <Route 
-          path="/login" 
-          element={
-            <PublicRoute>
-              <LoginPage onLoginSuccess={handleLogin} />
-            </PublicRoute>
-          } 
-        />
-        <Route 
-          path="/signup" 
-          element={
-            <PublicRoute>
-              <SignupPage onSignupSuccess={handleSignup} />
-            </PublicRoute>
-          } 
-        />
-        <Route 
-          path="/forgot-password" 
-          element={
-            <PublicRoute>
-              <ForgotPasswordPage />
-            </PublicRoute>
-          } 
-        />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <DashboardPage user={user} onLogout={handleLogout} />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
+        <AppContent />
         <Toaster />
       </Router>
     </GoogleOAuthProvider>
