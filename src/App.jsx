@@ -4,6 +4,8 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import LoginPage from './components/auth/LoginPage'
 import SignupPage from './components/auth/SignupPage'
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage'
+import ProtectedRoute from './components/auth/ProtectedRoute'
+import PublicRoute from './components/auth/PublicRoute'
 import DashboardPage from './components/dashboard/DashboardPage'
 import { Toaster } from './components/ui/toaster'
 import { getUser, clearTokens } from './lib/api/api-config'
@@ -15,28 +17,22 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function App() {
   const { toast } = useToast()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
 
-  // Check if user is already logged in on mount
+  // Load user from cookie on mount
   useEffect(() => {
     const storedUser = getUser()
     if (storedUser) {
       setUser(storedUser)
-      setIsAuthenticated(true)
     }
-    setLoading(false)
   }, [])
 
   const handleLogin = (userData) => {
     setUser(userData)
-    setIsAuthenticated(true)
   }
 
   const handleSignup = (userData) => {
     setUser(userData)
-    setIsAuthenticated(true)
   }
 
   const handleLogout = async () => {
@@ -52,19 +48,7 @@ function App() {
     } finally {
       clearTokens()
       setUser(null)
-      setIsAuthenticated(false)
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -74,33 +58,36 @@ function App() {
         <Route 
           path="/login" 
           element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : 
-            <LoginPage onLoginSuccess={handleLogin} />
+            <PublicRoute>
+              <LoginPage onLoginSuccess={handleLogin} />
+            </PublicRoute>
           } 
         />
         <Route 
           path="/signup" 
           element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : 
-            <SignupPage onSignupSuccess={handleSignup} />
+            <PublicRoute>
+              <SignupPage onSignupSuccess={handleSignup} />
+            </PublicRoute>
           } 
         />
         <Route 
           path="/forgot-password" 
           element={
-            isAuthenticated ? <Navigate to="/dashboard" /> : 
-            <ForgotPasswordPage />
+            <PublicRoute>
+              <ForgotPasswordPage />
+            </PublicRoute>
           } 
         />
         <Route 
           path="/dashboard" 
           element={
-            isAuthenticated && user ? 
-            <DashboardPage user={user} onLogout={handleLogout} /> : 
-            <Navigate to="/login" />
+            <ProtectedRoute>
+              <DashboardPage user={user} onLogout={handleLogout} />
+            </ProtectedRoute>
           } 
         />
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+        <Route path="/" element={<Navigate to="/login" />} />
         </Routes>
         <Toaster />
       </Router>

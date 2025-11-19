@@ -2,6 +2,8 @@
 
 Professional Email Management System - Frontend Application
 
+The application will be available at `https://mailbox-pro.vercel.app`
+
 ## 🚀 Features
 
 - ✅ User Authentication (Login/Register)
@@ -31,7 +33,7 @@ Professional Email Management System - Frontend Application
 
 1. Clone the repository
 ```bash
-cd Mail/email_app_frontend
+cd email_app_frontend
 ```
 
 2. Install dependencies

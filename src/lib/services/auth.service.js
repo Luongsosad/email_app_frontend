@@ -74,6 +74,7 @@ export const authService = {
       const { accessToken } = result.data
       // Update only access token in cookies
       setCookie('access_token', accessToken, 1)
+      return result
     }
 
     return result
