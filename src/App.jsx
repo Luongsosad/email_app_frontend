@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { GoogleOAuthProvider } from '@react-oauth/google'
 import LoginPage from './components/auth/LoginPage'
 import SignupPage from './components/auth/SignupPage'
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage'
+import AuthCallback from './components/auth/AuthCallback'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import PublicRoute from './components/auth/PublicRoute'
 import DashboardPage from './components/dashboard/DashboardPage'
@@ -12,8 +12,6 @@ import { getUser, clearTokens } from './lib/api/api-config'
 import { authService } from './lib/services/auth.service'
 import { useToast } from './hooks/use-toast'
 import './App.css'
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function AppContent() {
   const { toast } = useToast()
@@ -87,6 +85,10 @@ function AppContent() {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/auth/callback" 
+        element={<AuthCallback onLoginSuccess={handleLogin} />} 
+      />
       <Route path="/" element={<Navigate to="/login" />} />
     </Routes>
   )
@@ -94,12 +96,10 @@ function AppContent() {
 
 function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <Router>
-        <AppContent />
-        <Toaster />
-      </Router>
-    </GoogleOAuthProvider>
+    <Router>
+      <AppContent />
+      <Toaster />
+    </Router>
   )
 }
 

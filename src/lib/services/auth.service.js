@@ -37,22 +37,6 @@ export const authService = {
     return result
   },
 
-  // Google login
-  loginWithGoogle: async (googleToken) => {
-    const result = await apiCall(API_ENDPOINTS.AUTH.GOOGLE, {
-      method: 'POST',
-      body: JSON.stringify({ token: googleToken }),
-    })
-
-    if (result.success && result.data) {
-      const { accessToken, refreshToken, user } = result.data
-      setTokens(accessToken, refreshToken)
-      setUser(user)
-    }
-
-    return result
-  },
-
   // Logout
   logout: async () => {
     const result = await apiCall(API_ENDPOINTS.AUTH.LOGOUT, {
