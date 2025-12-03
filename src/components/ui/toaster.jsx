@@ -4,12 +4,13 @@ export function Toaster() {
   const { toasts, dismiss } = useToast()
 
   return (
-    <div className="fixed top-4 right-4 z-[100] flex max-h-screen w-full flex-col gap-2 md:max-w-[420px] pointer-events-none">
+    <div className="fixed top-4 right-4 z-[100] flex max-h-screen w-full flex-col gap-2 md:max-w-[420px]">
       {toasts.map(function ({ id, title, description, variant }) {
         return (
           <div
             key={id}
-            className={`pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 pr-10 shadow-lg transition-all duration-300 animate-slideIn
+            onClick={() => dismiss(id)}
+            className={`relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 pr-10 shadow-lg transition-all duration-300 animate-slideIn cursor-pointer
               ${variant === 'destructive' 
                 ? 'border-red-200 bg-red-50 text-red-900' 
                 : variant === 'success'
@@ -18,15 +19,18 @@ export function Toaster() {
               }
             `}
           >
-            <div className="grid gap-1 flex-1">
+            <div className="grid gap-1 flex-1 pointer-events-none">
               {title && <div className="text-sm font-semibold">{title}</div>}
               {description && (
                 <div className="text-sm opacity-90">{description}</div>
               )}
             </div>
             <button
-              onClick={() => dismiss(id)}
-              className="absolute right-2 top-2 rounded-md p-1 text-gray-500 hover:text-gray-900 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                dismiss(id)
+              }}
+              className="absolute right-2 top-2 rounded-md p-1 text-gray-500 hover:text-gray-900 transition-colors z-10"
               aria-label="Close"
             >
               <svg

@@ -144,7 +144,15 @@ function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (toastId) => dispatch({ type: 'DISMISS_TOAST', toastId }),
+    dismiss: (toastId) => {
+      // Clear timeout if exists
+      if (toastTimeouts.has(toastId)) {
+        clearTimeout(toastTimeouts.get(toastId))
+        toastTimeouts.delete(toastId)
+      }
+      // Remove immediately
+      dispatch({ type: 'REMOVE_TOAST', toastId })
+    },
   }
 }
 

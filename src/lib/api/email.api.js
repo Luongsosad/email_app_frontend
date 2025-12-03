@@ -126,9 +126,14 @@ export const deleteEmail = async (emailId, permanent = false) => {
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
 export const markAsRead = async (emailId) => {
-  return modifyEmail(emailId, {
-    removeLabelIds: ['UNREAD'],
-  })
+  try {
+    return await apiCall(`/emails/${emailId}/read`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Error marking email as read:', error)
+    return { success: false, error: error.message }
+  }
 }
 
 /**
@@ -137,9 +142,14 @@ export const markAsRead = async (emailId) => {
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
 export const markAsUnread = async (emailId) => {
-  return modifyEmail(emailId, {
-    addLabelIds: ['UNREAD'],
-  })
+  try {
+    return await apiCall(`/emails/${emailId}/unread`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Error marking email as unread:', error)
+    return { success: false, error: error.message }
+  }
 }
 
 /**

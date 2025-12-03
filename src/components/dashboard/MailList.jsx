@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import { Star, Paperclip, Loader2 } from 'lucide-react'
+import { Star, Paperclip, Loader2, MoreVertical } from 'lucide-react'
 import { formatDate } from '@/lib/utils/utils'
 import EmailContextMenu from './EmailContextMenu'
 
@@ -25,10 +25,20 @@ function MailList({
     })
   }
 
+  const handleMenuClick = (e, email) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setContextMenu({
+      email,
+      position: { x: rect.left, y: rect.bottom + 5 }
+    })
+  }
+
   return (
     <div className="w-96 bg-card border-r border-border flex flex-col overflow-hidden">
       {/* Email List */}
-      <div className="flex-1 overflow-y-auto">{loading ? (
+      <div className="flex-1 overflow-y-auto">
+        {loading ? (
           <div className="p-8 text-center text-muted-foreground">
             <Loader2 size={32} className="animate-spin mx-auto mb-2" />
             <p>Loading emails...</p>
@@ -38,12 +48,12 @@ function MailList({
             <p>No emails found</p>
           </div>
         ) : (
-          emails.map(email => (
+          emails.map((email) => (
             <button
               key={email.id}
               onClick={() => onSelectEmail(email)}
               onContextMenu={(e) => handleContextMenu(e, email)}
-              className={`w-full px-4 py-3 border-b border-border text-left transition hover:bg-muted ${
+              className={`group w-full px-4 py-3 border-b border-border text-left transition hover:bg-muted ${
                 selectedEmail?.id === email.id ? 'bg-accent/10' : 'bg-background'
               } ${!email.isRead ? 'bg-accent/15' : ''}`}
             >
@@ -53,7 +63,7 @@ function MailList({
                     e.stopPropagation()
                     onStarEmail(email.id, email.isStarred)
                   }}
-                  className="mt-1 text-muted-foreground hover:text-primary transition"
+                  className="mt-1 text-muted-foreground hover:text-primary transition flex-shrink-0"
                   title={email.isStarred ? 'Remove star' : 'Add star'}
                 >
                   <Star
@@ -90,6 +100,15 @@ function MailList({
                     </div>
                   )}
                 </div>
+
+                {/* Three dots menu button */}
+                <button
+                  onClick={(e) => handleMenuClick(e, email)}
+                  className="mt-1 text-muted-foreground hover:text-foreground transition flex-shrink-0 opacity-0 group-hover:opacity-100"
+                  title="More actions"
+                >
+                  <MoreVertical size={18} />
+                </button>
               </div>
             </button>
           ))
