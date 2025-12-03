@@ -42,8 +42,13 @@ export const getAuthHeaders = () => {
 
 // Store tokens
 export const setTokens = (accessToken, refreshToken) => {
-  setCookie('access_token', accessToken, 1) // 1 day for access token
-  setCookie('refresh_token', refreshToken, 7) // 7 days for refresh token
+  // Set access token to expire in 15 minutes (matching backend)
+  const accessTokenExpires = new Date()
+  accessTokenExpires.setMinutes(accessTokenExpires.getMinutes() + 15)
+  document.cookie = `access_token=${encodeURIComponent(accessToken)};expires=${accessTokenExpires.toUTCString()};path=/;SameSite=Strict`
+  
+  // Set refresh token to expire in 7 days
+  setCookie('refresh_token', refreshToken, 7)
 }
 
 // Get tokens

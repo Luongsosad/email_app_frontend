@@ -19,6 +19,10 @@ export default function Sidebar({
     'DRAFT': 'drafts',
     'SPAM': 'spam',
     'TRASH': 'trash',
+    'CHAT': 'chat',
+    'STARRED': 'starred',
+    'IMPORTANT': 'important',
+    'UNREAD': 'unread',
   }
 
   // Get folder config and unread count
@@ -62,7 +66,7 @@ export default function Sidebar({
       {/* Logo */}
       <div className="px-6 py-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-10 min-h-[31px] bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
             <span className="text-xl text-primary-foreground font-bold">📧</span>
           </div>
           <span className="text-xl font-bold text-foreground">MailBox</span>

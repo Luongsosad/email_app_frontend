@@ -5,27 +5,30 @@ export function useEmail() {
   const [emails, setEmails] = useState([])
   const [emailDetail, setEmailDetail] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [error, setError] = useState(null)
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
     total: 0,
+    nextPageToken: null,
   })
 
   /**
    * Fetch emails by mailbox/folder
    */
-  const fetchEmails = useCallback(async (mailboxId, page = 1, pageSize = 20) => {
+  const fetchEmails = useCallback(async (mailboxId, page = 1, pageSize = 20, search = '', pageToken = '') => {
     setLoading(true)
     setError(null)
     try {
-      const response = await emailApi.fetchEmailsByMailbox(mailboxId, page, pageSize)
+      const response = await emailApi.fetchEmailsByMailbox(mailboxId, page, pageSize, search, pageToken)
       if (response.success && response.data) {
         setEmails(response.data.emails || [])
         setPagination({
           page: response.data.page || page,
           pageSize: response.data.pageSize || pageSize,
           total: response.data.total || 0,
+          nextPageToken: response.data.nextPageToken || null,
         })
         return { success: true, data: response.data }
       } else {
@@ -44,7 +47,7 @@ export function useEmail() {
    * Fetch email detail by ID
    */
   const fetchEmailDetail = useCallback(async (emailId) => {
-    setLoading(true)
+    setLoadingDetail(true)
     setError(null)
     try {
       const response = await emailApi.fetchEmailDetail(emailId)
@@ -59,7 +62,7 @@ export function useEmail() {
       setError('Error fetching email detail')
       return { success: false, error: err.message }
     } finally {
-      setLoading(false)
+      setLoadingDetail(false)
     }
   }, [])
 
@@ -104,16 +107,14 @@ export function useEmail() {
         setEmails(prev => prev.map(e => 
           e.id === emailId ? { ...e, isStarred: !isStarred } : e
         ))
-        if (emailDetail?.id === emailId) {
-          setEmailDetail(prev => ({ ...prev, isStarred: !isStarred }))
-        }
+        setEmailDetail(prev => prev?.id === emailId ? { ...prev, isStarred: !isStarred } : prev)
         return { success: true }
       }
       return { success: false, error: response.error }
     } catch (err) {
       return { success: false, error: 'Failed to toggle star' }
     }
-  }, [emailDetail])
+  }, [])
 
   /**
    * Mark email as read
@@ -126,16 +127,14 @@ export function useEmail() {
         setEmails(prev => prev.map(e =>
           e.id === emailId ? { ...e, isRead: true } : e
         ))
-        if (emailDetail?.id === emailId) {
-          setEmailDetail(prev => ({ ...prev, isRead: true }))
-        }
+        setEmailDetail(prev => prev?.id === emailId ? { ...prev, isRead: true } : prev)
         return { success: true }
       }
       return { success: false, error: response.error }
     } catch (err) {
       return { success: false, error: 'Failed to mark as read' }
     }
-  }, [emailDetail])
+  }, [])
 
   /**
    * Mark email as unread
@@ -148,9 +147,7 @@ export function useEmail() {
         setEmails(prev => prev.map(e =>
           e.id === emailId ? { ...e, isRead: false } : e
         ))
-        if (emailDetail?.id === emailId) {
-          setEmailDetail(prev => ({ ...prev, isRead: false }))
-        }
+        setEmailDetail(prev => prev?.id === emailId ? { ...prev, isRead: false } : prev)
         return { success: true }
       }
       return { success: false, error: response.error }
@@ -214,6 +211,7 @@ export function useEmail() {
     emails,
     emailDetail,
     loading,
+    loadingDetail,
     error,
     pagination,
     fetchEmails,

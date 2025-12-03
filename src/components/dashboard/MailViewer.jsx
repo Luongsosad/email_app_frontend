@@ -1,10 +1,11 @@
 import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2 } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils/utils'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ReplyModal from '@/components/dashboard/ReplyModal'
 import ForwardModal from '@/components/dashboard/ForwardModal'
 import { attachmentApi } from '@/lib/api'
+import DOMPurify from 'dompurify'
 
 export default function MailViewer({
   email,
@@ -81,6 +82,30 @@ export default function MailViewer({
   const senderName = getSenderName()
   const senderEmail = getSenderEmail()
 
+  // Sanitize HTML content
+  const sanitizedBody = useMemo(() => {
+    if (!email.body) return ''
+    
+    // Configure DOMPurify to allow most HTML but remove dangerous elements
+    const config = {
+      ALLOWED_TAGS: [
+        'a', 'b', 'br', 'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'i', 'img', 'li', 'ol', 'p', 'span', 'strong', 'table', 'tbody',
+        'td', 'th', 'thead', 'tr', 'ul', 'blockquote', 'pre', 'code',
+        'hr', 'u', 's', 'del', 'ins', 'sub', 'sup', 'font', 'center'
+      ],
+      ALLOWED_ATTR: [
+        'href', 'src', 'alt', 'title', 'width', 'height', 'style',
+        'class', 'target', 'rel', 'border', 'cellpadding', 'cellspacing',
+        'align', 'valign', 'bgcolor', 'color', 'size', 'face'
+      ],
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+      ADD_ATTR: ['target'], // Allow opening links in new tab
+    }
+    
+    return DOMPurify.sanitize(email.body, config)
+  }, [email.body])
+
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
       {/* Header */}
@@ -94,9 +119,9 @@ export default function MailViewer({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => onStar(email.id)}
+            onClick={() => onStar(email.id, email.isStarred)}
             className="p-2 text-muted-foreground hover:text-primary transition"
-            title="Star"
+            title={email.isStarred ? 'Remove star' : 'Add star'}
           >
             <Star
               size={20}
@@ -197,8 +222,11 @@ export default function MailViewer({
             )}
 
             {/* Body */}
-            <div className="prose prose-sm max-w-none mb-6">
-              <div className="text-foreground whitespace-pre-wrap">{email.body}</div>
+            <div className="mb-6">
+              <div 
+                className="email-content text-foreground"
+                dangerouslySetInnerHTML={{ __html: sanitizedBody }}
+              />
             </div>
 
             {/* Attachments */}

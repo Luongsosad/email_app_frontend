@@ -6,11 +6,19 @@ import { API_ENDPOINTS } from './api-config'
  * @param {string} mailboxId - The mailbox ID (e.g., 'INBOX', 'SENT')
  * @param {number} page - Page number (default: 1)
  * @param {number} pageSize - Number of emails per page (default: 20)
+ * @param {string} search - Search query (optional)
+ * @param {string} pageToken - Page token for pagination (optional)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const fetchEmailsByMailbox = async (mailboxId, page = 1, pageSize = 20) => {
+export const fetchEmailsByMailbox = async (mailboxId, page = 1, pageSize = 20, search = '', pageToken = '') => {
   try {
-    const endpoint = `${API_ENDPOINTS.EMAILS.LIST(mailboxId)}?page=${page}&pageSize=${pageSize}`
+    let endpoint = `${API_ENDPOINTS.EMAILS.LIST(mailboxId)}?page=${page}&pageSize=${pageSize}`
+    if (search && search.trim()) {
+      endpoint += `&search=${encodeURIComponent(search.trim())}`
+    }
+    if (pageToken) {
+      endpoint += `&pageToken=${encodeURIComponent(pageToken)}`
+    }
     return await apiCall(endpoint)
   } catch (error) {
     console.error('Error fetching emails:', error)

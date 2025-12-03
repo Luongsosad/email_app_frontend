@@ -56,8 +56,8 @@ export const authService = {
 
     if (result.success && result.data) {
       const { accessToken } = result.data
-      // Update only access token in cookies
-      setCookie('access_token', accessToken, 1)
+      // Update tokens with proper expiry time
+      setTokens(accessToken, refreshToken)
       return result
     }
 
