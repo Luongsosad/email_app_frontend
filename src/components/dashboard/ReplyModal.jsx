@@ -1,9 +1,12 @@
 import { useState } from 'react'
-import { X, Send, Bold, Italic, Underline, List, Code } from 'lucide-react'
+import { X, Send, Bold, Italic, Underline, List, Code, Loader2 } from 'lucide-react'
 import { toggleTextFormatting } from '@/lib/utils/utils'
+import { emailApi } from '@/lib/api'
 
 export default function ReplyModal({ email, onClose, onSend }) {
-  const [body, setBody] = useState(`\n\nOn ${new Date(email.timestamp).toLocaleString()}, ${email.fromName} wrote:\n> ${email.body.split('\n')[0]}`)
+  const [body, setBody] = useState(`\n\nOn ${new Date(email.receivedDate || email.timestamp).toLocaleString()}, ${email.from} wrote:\n> ${(email.body || '').split('\n')[0]}`)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleFormat = (tag) => {
     const textarea = document.getElementById('reply-body')
@@ -25,8 +28,30 @@ export default function ReplyModal({ email, onClose, onSend }) {
     }, 0)
   }
 
-  const handleSend = () => {
-    onSend()
+  const handleSend = async () => {
+    if (!body.trim()) {
+      setError('Reply body cannot be empty')
+      return
+    }
+
+    setSending(true)
+    setError(null)
+
+    try {
+      const result = await emailApi.replyToEmail(email.id, {
+        body: body.trim(),
+      })
+
+      if (result.success) {
+        onSend()
+      } else {
+        setError(result.error || 'Failed to send reply')
+      }
+    } catch (err) {
+      setError('Failed to send reply. Please try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -34,10 +59,11 @@ export default function ReplyModal({ email, onClose, onSend }) {
       <div className="w-full max-w-2xl bg-card rounded-lg shadow-2xl flex flex-col max-h-96">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Reply to {email.fromName}</h2>
+          <h2 className="text-lg font-semibold text-foreground">Reply to {email.from}</h2>
           <button
             onClick={onClose}
             className="text-muted-foreground hover:text-foreground transition"
+            disabled={sending}
           >
             <X size={24} />
           </button>
@@ -45,12 +71,20 @@ export default function ReplyModal({ email, onClose, onSend }) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Formatting Toolbar */}
           <div className="flex items-center gap-1 p-2 bg-muted rounded-lg border border-border">
             <button
               onClick={() => handleFormat('**')}
               className="p-1.5 hover:bg-muted-foreground/20 rounded transition"
               title="Bold"
+              disabled={sending}
             >
               <Bold size={16} />
             </button>
@@ -58,6 +92,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
               onClick={() => handleFormat('*')}
               className="p-1.5 hover:bg-muted-foreground/20 rounded transition"
               title="Italic"
+              disabled={sending}
             >
               <Italic size={16} />
             </button>
@@ -65,6 +100,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
               onClick={() => handleFormat('__')}
               className="p-1.5 hover:bg-muted-foreground/20 rounded transition"
               title="Underline"
+              disabled={sending}
             >
               <Underline size={16} />
             </button>
@@ -72,6 +108,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
               onClick={() => handleFormat('- ')}
               className="p-1.5 hover:bg-muted-foreground/20 rounded transition"
               title="List"
+              disabled={sending}
             >
               <List size={16} />
             </button>
@@ -79,6 +116,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
               onClick={() => handleFormat('`')}
               className="p-1.5 hover:bg-muted-foreground/20 rounded transition"
               title="Code"
+              disabled={sending}
             >
               <Code size={16} />
             </button>
@@ -91,6 +129,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
             placeholder="Write your reply..."
             className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-sm resize-none"
             rows={6}
+            disabled={sending}
           />
         </div>
 
@@ -99,15 +138,26 @@ export default function ReplyModal({ email, onClose, onSend }) {
           <button
             onClick={onClose}
             className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition text-sm font-medium"
+            disabled={sending}
           >
             Cancel
           </button>
           <button
             onClick={handleSend}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={sending}
           >
-            <Send size={16} />
-            Send Reply
+            {sending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Send Reply
+              </>
+            )}
           </button>
         </div>
       </div>

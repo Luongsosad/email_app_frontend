@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { X, Send, Paperclip, Bold, Italic, Underline, List, Code } from 'lucide-react'
+import { X, Send, Paperclip, Bold, Italic, Underline, List, Code, Loader2 } from 'lucide-react'
 import { validateEmail, toggleTextFormatting, formatFileSize } from '@/lib/utils/utils'
+import { emailApi } from '@/lib/api'
 
 export default function ComposeModal({ user, onSend, onClose }) {
   const [to, setTo] = useState('')
@@ -10,8 +11,9 @@ export default function ComposeModal({ user, onSend, onClose }) {
   const [body, setBody] = useState('')
   const [attachments, setAttachments] = useState([])
   const [errors, setErrors] = useState([])
+  const [sending, setSending] = useState(false)
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const newErrors = []
 
     if (!to.trim()) {
@@ -38,19 +40,40 @@ export default function ComposeModal({ user, onSend, onClose }) {
       return
     }
 
-    const toEmails = to.split(',').map(e => e.trim())
-    const ccEmails = cc.split(',').map(e => e.trim()).filter(e => e)
-    const bccEmails = bcc.split(',').map(e => e.trim()).filter(e => e)
+    setSending(true)
+    setErrors([])
 
-    onSend({
-      to: toEmails,
-      cc: ccEmails,
-      bcc: bccEmails,
-      subject: subject.trim(),
-      body: body.trim(),
-      htmlBody: body.trim(),
-      attachments,
-    })
+    try {
+      const toEmails = to.split(',').map(e => e.trim())
+      const ccEmails = cc.split(',').map(e => e.trim()).filter(e => e)
+      const bccEmails = bcc.split(',').map(e => e.trim()).filter(e => e)
+
+      const result = await emailApi.sendEmail({
+        to: toEmails,
+        cc: ccEmails,
+        bcc: bccEmails,
+        subject: subject.trim(),
+        body: body.trim(),
+      })
+
+      if (result.success) {
+        onSend({
+          to: toEmails,
+          cc: ccEmails,
+          bcc: bccEmails,
+          subject: subject.trim(),
+          body: body.trim(),
+          htmlBody: body.trim(),
+          attachments,
+        })
+      } else {
+        setErrors([result.error || 'Failed to send email'])
+        setSending(false)
+      }
+    } catch (err) {
+      setErrors(['Failed to send email. Please try again.'])
+      setSending(false)
+    }
   }
 
   const handleFileSelect = (e) => {
@@ -248,15 +271,26 @@ export default function ComposeModal({ user, onSend, onClose }) {
           <button
             onClick={onClose}
             className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition text-sm font-medium"
+            disabled={sending}
           >
-            Draft
+            Cancel
           </button>
           <button
             onClick={handleSend}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={sending}
           >
-            <Send size={16} />
-            Send
+            {sending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Send
+              </>
+            )}
           </button>
         </div>
       </div>

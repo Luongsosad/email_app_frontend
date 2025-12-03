@@ -1,14 +1,14 @@
-import { Search, Star, Paperclip } from 'lucide-react'
+import { Search, Star, Paperclip, Loader2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils/utils'
 import { useState } from 'react'
 
-export default function MailList({ emails, selectedEmail, onSelectEmail, onStarEmail }) {
+export default function MailList({ emails, selectedEmail, onSelectEmail, onStarEmail, loading }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const filteredEmails = emails.filter(email =>
-    email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    email.fromName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    email.body.toLowerCase().includes(searchQuery.toLowerCase())
+    email.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    email.senderName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    email.preview?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   return (
@@ -29,12 +29,24 @@ export default function MailList({ emails, selectedEmail, onSelectEmail, onStarE
 
       {/* Email Count */}
       <div className="px-4 py-2 border-b border-border text-sm text-muted-foreground">
-        {filteredEmails.length} Email{filteredEmails.length !== 1 ? 's' : ''}
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin" />
+            Loading emails...
+          </span>
+        ) : (
+          `${filteredEmails.length} Email${filteredEmails.length !== 1 ? 's' : ''}`
+        )}
       </div>
 
       {/* Email List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredEmails.length === 0 ? (
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground">
+            <Loader2 size={32} className="animate-spin mx-auto mb-2" />
+            <p>Loading emails...</p>
+          </div>
+        ) : filteredEmails.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <p>No emails found</p>
           </div>
@@ -65,22 +77,22 @@ export default function MailList({ emails, selectedEmail, onSelectEmail, onStarE
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between gap-2">
                     <p className={`text-sm truncate ${!email.isRead ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'}`}>
-                      {email.fromName}
+                      {email.senderName || 'Unknown Sender'}
                     </p>
                     <span className={`text-xs whitespace-nowrap ${!email.isRead ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-                      {formatDate(email.timestamp)}
+                      {formatDate(new Date(email.timestamp))}
                     </span>
                   </div>
 
                   <p className={`text-sm truncate mt-1 ${!email.isRead ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-                    {email.subject}
+                    {email.subject || '(No Subject)'}
                   </p>
 
                   <p className={`text-xs truncate mt-1 ${!email.isRead ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-                    {email.body.substring(0, 50)}...
+                    {email.preview || ''}
                   </p>
 
-                  {email.attachments.length > 0 && (
+                  {email.attachments && email.attachments.length > 0 && (
                     <div className="flex items-center gap-1 mt-2">
                       <Paperclip size={14} className={!email.isRead ? 'text-foreground' : 'text-muted-foreground'} />
                       <span className={`text-xs ${!email.isRead ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>

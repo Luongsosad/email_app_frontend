@@ -1,9 +1,10 @@
-import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward } from 'lucide-react'
+import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2 } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils/utils'
 import { useState } from 'react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ReplyModal from '@/components/dashboard/ReplyModal'
 import ForwardModal from '@/components/dashboard/ForwardModal'
+import { attachmentApi } from '@/lib/api'
 
 export default function MailViewer({
   email,
@@ -12,12 +13,14 @@ export default function MailViewer({
   onSpam,
   onDelete,
   onArchive,
+  loading,
 }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showConfirmSpam, setShowConfirmSpam] = useState(false)
   const [showConfirmArchive, setShowConfirmArchive] = useState(false)
   const [showReply, setShowReply] = useState(false)
   const [showForward, setShowForward] = useState(false)
+  const [downloadingAttachments, setDownloadingAttachments] = useState(new Set())
 
   const handleDeleteConfirm = () => {
     onDelete(email.id)
@@ -33,6 +36,50 @@ export default function MailViewer({
     onArchive(email.id)
     setShowConfirmArchive(false)
   }
+
+  const handleDownloadAttachment = async (attachment) => {
+    setDownloadingAttachments(prev => new Set([...prev, attachment.id]))
+    try {
+      await attachmentApi.downloadAttachment(email.id, attachment.id, attachment.name)
+    } catch (error) {
+      console.error('Failed to download attachment:', error)
+      alert('Failed to download attachment. Please try again.')
+    } finally {
+      setDownloadingAttachments(prev => {
+        const newSet = new Set([...prev])
+        newSet.delete(attachment.id)
+        return newSet
+      })
+    }
+  }
+
+  // Extract sender name from email address if needed
+  const getSenderName = () => {
+    if (email.from) {
+      // Try to extract name from "Name <email@example.com>" format
+      const match = email.from.match(/^(.+?)\s*<(.+)>$/)
+      if (match && match[1]) {
+        return match[1].trim().replace(/^["']|["']$/g, '')
+      }
+      // If no name, return the email address
+      return email.from.split('@')[0]
+    }
+    return 'Unknown Sender'
+  }
+
+  const getSenderEmail = () => {
+    if (email.from) {
+      const match = email.from.match(/<(.+)>$/)
+      if (match && match[1]) {
+        return match[1]
+      }
+      return email.from
+    }
+    return ''
+  }
+
+  const senderName = getSenderName()
+  const senderEmail = getSenderEmail()
 
   return (
     <div className="flex-1 flex flex-col bg-background overflow-hidden">
@@ -101,75 +148,93 @@ export default function MailViewer({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-3xl mx-auto">
-          {/* Subject */}
-          <h1 className="text-3xl font-bold mb-4 text-foreground">{email.subject}</h1>
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 size={32} className="animate-spin mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading email...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 max-w-3xl mx-auto">
+            {/* Subject */}
+            <h1 className="text-3xl font-bold mb-4 text-foreground">{email.subject || '(No Subject)'}</h1>
 
-          {/* From/To Info */}
-          <div className="bg-muted/30 rounded-lg p-4 mb-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-bold text-primary-foreground">
-                  {email.fromName.charAt(0).toUpperCase()}
-                </span>
-              </div>
+            {/* From/To Info */}
+            <div className="bg-muted/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg font-bold text-primary-foreground">
+                    {senderName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
 
-              <div className="flex-1">
-                <p className="font-semibold text-foreground">{email.fromName}</p>
-                <p className="text-sm text-muted-foreground">{email.from}</p>
+                <div className="flex-1">
+                  <p className="font-semibold text-foreground">{senderName}</p>
+                  <p className="text-sm text-muted-foreground">{senderEmail}</p>
 
-                {email.cc.length > 0 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    <strong>Cc:</strong> {email.cc.join(', ')}
+                  {email.cc && email.cc.length > 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <strong>Cc:</strong> {Array.isArray(email.cc) ? email.cc.join(', ') : email.cc}
+                    </p>
+                  )}
+
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatDate(new Date(email.receivedDate || email.timestamp))}
                   </p>
-                )}
+                </div>
+              </div>
+            </div>
 
-                <p className="text-xs text-muted-foreground mt-2">
-                  {formatDate(email.timestamp)}
+            {/* To recipients */}
+            {email.to && (
+              <div className="mb-6 text-sm">
+                <p className="text-muted-foreground">
+                  <strong>To:</strong> {Array.isArray(email.to) ? email.to.join(', ') : email.to}
                 </p>
               </div>
+            )}
+
+            {/* Body */}
+            <div className="prose prose-sm max-w-none mb-6">
+              <div className="text-foreground whitespace-pre-wrap">{email.body}</div>
             </div>
-          </div>
 
-          {/* To recipients */}
-          <div className="mb-6 text-sm">
-            <p className="text-muted-foreground">
-              <strong>To:</strong> {email.to.join(', ')}
-            </p>
-          </div>
-
-          {/* Body */}
-          <div className="prose prose-sm max-w-none mb-6">
-            <p className="text-foreground whitespace-pre-wrap">{email.body}</p>
-          </div>
-
-          {/* Attachments */}
-          {email.attachments.length > 0 && (
-            <div className="border-t border-border pt-6">
-              <h3 className="font-semibold mb-3 text-foreground">Attachments ({email.attachments.length})</h3>
-              <div className="space-y-2">
-                {email.attachments.map(attachment => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition cursor-pointer"
-                  >
-                    <div className="w-8 h-8 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-primary">
-                        {attachment.name.split('.').pop()?.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{attachment.name}</p>
-                      <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
-                    </div>
-                  </div>
-                ))}
+            {/* Attachments */}
+            {email.attachments && email.attachments.length > 0 && (
+              <div className="border-t border-border pt-6">
+                <h3 className="font-semibold mb-3 text-foreground">Attachments ({email.attachments.length})</h3>
+                <div className="space-y-2">
+                  {email.attachments.map(attachment => (
+                    <button
+                      key={attachment.id}
+                      onClick={() => handleDownloadAttachment(attachment)}
+                      disabled={downloadingAttachments.has(attachment.id)}
+                      className="w-full flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="w-8 h-8 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-primary">
+                          {attachment.name.split('.').pop()?.toUpperCase().substring(0, 3)}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <p className="text-sm font-medium text-foreground truncate">{attachment.name}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                      </div>
+                      {downloadingAttachments.has(attachment.id) ? (
+                        <Loader2 size={18} className="animate-spin text-primary" />
+                      ) : (
+                        <Download size={18} className="text-muted-foreground" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Confirmation Modals */}
       <ConfirmModal

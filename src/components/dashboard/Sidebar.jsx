@@ -1,4 +1,4 @@
-import { Mail, LogOut, Settings } from 'lucide-react'
+import { Mail, LogOut, Settings, Loader2 } from 'lucide-react'
 import { FOLDER_LABELS } from '@/lib/constants/constants'
 
 export default function Sidebar({
@@ -9,7 +9,54 @@ export default function Sidebar({
   onLogout,
   onCompose,
   onSettings,
+  mailboxes,
+  loading,
 }) {
+  // Map Gmail label IDs to folder keys
+  const labelToFolderMap = {
+    'INBOX': 'inbox',
+    'SENT': 'sent',
+    'DRAFT': 'drafts',
+    'SPAM': 'spam',
+    'TRASH': 'trash',
+  }
+
+  // Get folder config and unread count
+  const getFolderData = () => {
+    const folderData = []
+    
+    if (mailboxes && mailboxes.length > 0) {
+      // Use real mailboxes from backend
+      mailboxes.forEach(mailbox => {
+        const folderKey = labelToFolderMap[mailbox.id] || mailbox.id.toLowerCase()
+        const config = FOLDER_LABELS[folderKey]
+        
+        if (config) {
+          folderData.push({
+            key: mailbox.id, // Use Gmail label ID as key
+            label: mailbox.name,
+            icon: config.icon,
+            unreadCount: mailbox.unreadCount || 0,
+          })
+        }
+      })
+    } else {
+      // Fallback to default folders if no mailboxes loaded
+      Object.entries(FOLDER_LABELS).forEach(([key, config]) => {
+        folderData.push({
+          key: key,
+          label: config.label,
+          icon: config.icon,
+          unreadCount: unreadCounts[key] || 0,
+        })
+      })
+    }
+
+    return folderData
+  }
+
+  const folders = getFolderData()
+
   return (
     <div className="w-64 bg-card border-r border-border flex flex-col overflow-hidden">
       {/* Logo */}
@@ -32,30 +79,36 @@ export default function Sidebar({
 
       {/* Folders */}
       <nav className="flex-1 overflow-y-auto px-2 space-y-1">
-        {Object.entries(FOLDER_LABELS).map(([key, config]) => {
-          const Icon = config.icon
-          const count = unreadCounts[key]
-          
-          return (
-            <button
-              key={key}
-              onClick={() => onFolderSelect(key)}
-              className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                selectedFolder === key
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="flex-1 text-left">{config.label}</span>
-              {count > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full px-2 py-0.5">
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={24} className="animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          folders.map((folder) => {
+            const Icon = folder.icon
+            const count = folder.unreadCount
+            
+            return (
+              <button
+                key={folder.key}
+                onClick={() => onFolderSelect(folder.key)}
+                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                  selectedFolder === folder.key
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <Icon size={20} />
+                <span className="flex-1 text-left">{folder.label}</span>
+                {count > 0 && (
+                  <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full px-2 py-0.5">
+                    {count}
+                  </span>
+                )}
+              </button>
+            )
+          })
+        )}
       </nav>
 
       {/* Footer */}
