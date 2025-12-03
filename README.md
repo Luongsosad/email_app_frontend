@@ -1,18 +1,26 @@
 # Email App Frontend
 
-Professional Email Management System - Frontend Application
+Professional Email Management System with Gmail Integration - Frontend Application
 
-The application will be available at `https://mailbox-pro.vercel.app`
+## 🌐 Deployed URLs
+
+- **Frontend**: [https://mailbox-pro.vercel.app](https://mailbox-pro.vercel.app)
+- **Backend API**: [https://email-app-backend-ecru.vercel.app](https://email-app-backend-ecru.vercel.app)
+- **API Documentation**: [https://email-app-backend-ecru.vercel.app/api/docs](https://email-app-backend-ecru.vercel.app/api/docs)
 
 ## 🚀 Features
 
-- ✅ User Authentication (Login/Register)
-- ✅ Email Management (Inbox, Sent, Drafts, Spam, Trash, Archive)
-- ✅ Compose, Reply, Forward emails
-- ✅ Email Search and Filtering
-- ✅ Settings and Preferences
-- 🔄 Google OAuth Login (Coming Soon)
-- 🔄 Real-time Email Updates (Coming Soon)
+- ✅ **Gmail Integration** - Full Gmail API integration via Google OAuth 2.0
+- ✅ **Real Gmail Folders** - Inbox, Sent, Drafts, Spam, Trash, Starred, Important, Unread, Chat
+- ✅ **Email Management** - Read, compose, reply, forward, star, archive, delete emails
+- ✅ **Advanced Search** - Search emails with Gmail query syntax
+- ✅ **Pagination** - Navigate through email pages with Gmail's pageToken
+- ✅ **File Attachments** - Upload and download email attachments (25MB limit)
+- ✅ **Rich HTML Content** - Sanitized HTML email rendering with DOMPurify
+- ✅ **Context Menu** - Right-click actions for emails
+- ✅ **Toast Notifications** - User feedback for all actions
+- ✅ **Auto Token Refresh** - Automatic access token refresh on 401 errors
+- ✅ **Responsive Design** - Gmail-inspired UI with dark mode support
 
 ## 🛠️ Tech Stack
 
@@ -25,44 +33,44 @@ The application will be available at `https://mailbox-pro.vercel.app`
 
 ## 📋 Prerequisites
 
-- Node.js 16+ 
+- Node.js 18+ 
 - npm or yarn
-- Backend API running on port 3000
+- Backend API running (locally or deployed)
+- Google Cloud Project with Gmail API enabled
 
-## 🔧 Installation
+## 🔧 Local Setup & Installation
 
-1. Clone the repository
+### 1. Clone the repository
+
 ```bash
+git clone <repository-url>
 cd email_app_frontend
 ```
 
-2. Install dependencies
+### 2. Install dependencies
+
 ```bash
 npm install
 ```
 
-3. Configure environment variables
-```bash
-cp .env.example .env
-```
+### 3. Configure environment variables
 
-Edit `.env` file:
+Create a `.env` file in the root directory:
+
 ```env
+# API Configuration
 VITE_API_BASE_URL=http://localhost:3000/api
-VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
-```
-
 ## 🚀 Running the Application
 
 ### Development Mode
 
-Start the development server on port 3030:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:3030`
+The application will be available at `http://localhost:5173` (default Vite port)
 
 ### Production Build
 
@@ -72,14 +80,285 @@ Build for production:
 npm run build
 ```
 
-Preview production build:
+Preview production build locally:
 
 ```bash
 npm run preview
 ```
 
-## 🔌 API Integration
+### Deploy to Vercel
 
+```bash
+# Install Vercel CLI
+npm install -g vercel
+
+# Deploy
+vercel
+
+# Deploy to production
+vercel --prod
+```
+## 🔐 Google OAuth Setup
+
+### Step 1: Create Google Cloud Project
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable **Gmail API**:
+   - Navigate to "APIs & Services" > "Library"
+   - Search for "Gmail API"
+   - Click "Enable"
+
+### Step 2: Create OAuth 2.0 Credentials
+
+1. Go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "OAuth client ID"
+3. Choose "Web application"
+4. Configure:
+   - **Name**: Email App
+   - **Authorized JavaScript origins**:
+     - `http://localhost:5173` (for local development)
+     - `https://mailbox-pro.vercel.app` (for production)
+   - **Authorized redirect URIs**:
+     - `http://localhost:3000/api/auth/google/callback` (backend local)
+     - `https://email-app-backend-ecru.vercel.app/api/auth/google/callback` (backend production)
+
+5. Save and copy:
+   - **Client ID**
+   - **Client Secret**
+
+### Step 3: Configure Backend
+
+Add to backend `.env` file:
+
+```env
+GOOGLE_CLIENT_ID=your_client_id_here.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret_here
+GOOGLE_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+FRONTEND_URL=http://localhost:5173
+```
+
+### Step 4: OAuth Consent Screen
+
+1. Go to "OAuth consent screen"
+2. Choose "External" (for testing) or "Internal" (for organization)
+3. Fill required information:
+   - App name: "Email App"
+   - User support email: your email
+   - Developer contact: your email
+4. Add scopes:
+   - `https://www.googleapis.com/auth/gmail.readonly`
+   - `https://www.googleapis.com/auth/gmail.send`
+   - `https://www.googleapis.com/auth/gmail.modify`
+## 🔐 Authentication & Token Management
+
+### OAuth Flow
+
+1. User clicks "Login with Google"
+2. Frontend redirects to backend OAuth authorize endpoint
+3. Backend redirects to Google OAuth consent screen
+4. User grants permissions
+5. Google redirects to backend callback with authorization code
+6. Backend exchanges code for access & refresh tokens
+7. Backend stores tokens in database
+8. Backend redirects to frontend with success
+9. Frontend fetches user data and mailboxes
+
+### Token Storage & Security
+
+#### Access Token (15 minutes expiry)
+- **Storage**: HTTP-only cookies
+- **Security**: 
+  - Cannot be accessed by JavaScript (prevents XSS attacks)
+  - Secure flag in production (HTTPS only)
+  - SameSite=Lax (CSRF protection)
+  - Short expiry time limits damage from token theft
+
+#### Refresh Token (7 days expiry)
+- **Storage**: HTTP-only cookies
+- **Security**:
+  - Longer expiry but cannot be accessed by JavaScript
+  - Used only to refresh access tokens
+  - Revoked on logout
+
+#### Why HTTP-only Cookies?
+
+✅ **Better than localStorage/sessionStorage**:
+- Immune to XSS attacks (JavaScript cannot read)
+- Automatically sent with requests
+- Secure flag ensures HTTPS transmission
+- SameSite prevents CSRF
+
+❌ **localStorage/sessionStorage vulnerabilities**:
+- Accessible by any JavaScript code
+- Vulnerable to XSS attacks
+- Can be stolen by malicious scripts
+- No built-in security features
+
+### Token Expiry Simulation (Demo)
+
+For demonstration purposes, access token expiry is set to **15 minutes**:
+
+```typescript
+// Backend: src/modules/auth/auth.service.ts
+const accessTokenExpires = new Date();
+accessTokenExpires.setMinutes(accessTokenExpires.getMinutes() + 15);
+```
+
+```javascript
+// Frontend: src/lib/api/api-config.js
+const accessTokenExpires = new Date();
+accessTokenExpires.setMinutes(accessTokenExpires.getMinutes() + 15);
+## 🎨 Features Implemented
+
+### Email Management
+- ✅ Gmail folder navigation (Inbox, Sent, Drafts, Spam, Trash, Starred, Important, Unread, Chat)
+- ✅ Email list with unread count badges
+- ✅ Email detail viewer with HTML rendering
+- ✅ Compose email with attachments (25MB limit)
+- ✅ Reply and forward emails
+- ✅ Star/unstar emails
+- ✅ Mark as read/unread
+- ✅ Archive emails
+- ✅ Move to spam
+- ✅ Delete emails with confirmation
+- ✅ Context menu (right-click actions)
+
+### Search & Pagination
+- ✅ Gmail query syntax search
+- ✅ Debounced search (500ms)
+- ✅ Previous/Next page navigation
+- ✅ Gmail pageToken pagination
+
+### UI/UX
+- ✅ Gmail-inspired interface
+- ✅ Dark mode support
+- ✅ Toast notifications for all actions
+- ✅ Loading states
+- ✅ Error handling
+- ✅ Responsive design
+- ✅ Minimize/Maximize compose window
+
+### Security
+- ✅ HTTP-only cookie storage
+- ✅ Auto token refresh
+- ✅ CORS protection
+- ✅ HTML sanitization (DOMPurify)
+- ✅ XSS prevention
+
+## 🧪 Testing
+
+### Test Accounts
+
+You can use any Gmail account for testing. The app will:
+1. Request Gmail API permissions
+2. Access your real Gmail data
+3. Allow full email management
+
+**Note**: This is a real Gmail integration, not a test/sandbox environment.
+
+### Test Features
+
+1. **Search**: Try Gmail queries like:
+   - `from:example@gmail.com`
+   - `subject:important`
+   - `has:attachment`
+
+2. **Token Expiry**: 
+   - Wait 15 minutes after login
+   - Perform any action
+   - Token auto-refresh should happen seamlessly
+
+3. **Attachments**:
+   - Try uploading files < 25MB
+   - Download attachments from received emails
+
+## 🐛 Troubleshooting
+
+### "Gmail not connected" error
+- Click "Login with Google" again
+- Grant all requested permissions
+- Check if Google OAuth credentials are correct
+
+### Attachments not downloading
+- Check browser console for errors
+- Verify attachment API endpoint is accessible
+- Ensure attachment size is within limits
+
+### Token refresh not working
+- Check if refresh token cookie exists
+- Verify backend refresh endpoint is working
+- Check CORS configuration
+
+### Emails not loading
+- Verify Gmail API is enabled in Google Cloud
+- Check if API quotas are exceeded
+- Ensure OAuth scopes include Gmail access
+
+## 📝 Development Notes
+
+- **Token expiry**: 15 minutes (configurable)
+- **Attachment limit**: 25MB per file, 25MB total
+- **Search debounce**: 500ms
+- **Pagination**: 20 emails per page
+- **Cookie expiry**: Matches token expiry times
+
+## 🔜 Future Enhancements
+
+- [ ] Email drafts auto-save
+- [ ] Rich text editor (WYSIWYG)
+- [ ] Email threading/conversations
+- [ ] Custom labels and tags
+- [ ] Email filters and rules
+- [ ] Multiple account support
+- [ ] Offline mode
+- [ ] Progressive Web App (PWA)
+
+## 📄 License
+
+Private - All rights reserved
+
+## 👨‍💻 Contributors
+
+- **Luongsosad** - Frontend Development
+- **notDuyLam** - Backend Development transmission over secure connection
+   - Secure cookie flag enabled
+
+2. **CORS Configuration**
+   - Only allowed origins can access API
+   - Credentials included in requests
+
+3. **Token Rotation**
+   - Access tokens expire frequently (15 min)
+   - Refresh tokens expire after 7 days
+   - Tokens revoked on logout
+
+4. **Gmail API Security**
+   - OAuth 2.0 authorization
+   - Limited scopes (only Gmail access)
+   - Tokens stored encrypted in database
+   - No password storage
+
+- `GET /api/auth/google/authorize` - Initiate Google OAuth flow
+- `GET /api/auth/google/callback` - OAuth callback handler
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/logout` - Logout and revoke tokens
+
+### Gmail API Endpoints
+
+- `GET /api/emails/mailboxes` - Get all Gmail labels/folders
+- `GET /api/emails/list/:labelId` - List emails in folder (with search & pagination)
+- `GET /api/emails/:id` - Get email detail
+- `POST /api/emails/send` - Send email with attachments
+- `POST /api/emails/:id/reply` - Reply to email
+- `POST /api/emails/:id/forward` - Forward email
+- `PATCH /api/emails/:id/star` - Toggle star
+- `PATCH /api/emails/:id/read` - Mark as read
+- `PATCH /api/emails/:id/unread` - Mark as unread
+- `POST /api/emails/:id/spam` - Move to spam
+- `POST /api/emails/:id/archive` - Archive email
+- `DELETE /api/emails/:id` - Delete email
+- `GET /api/emails/:emailId/attachments/:attachmentId` - Download attachment
 The frontend connects to the backend API running on `http://localhost:3000/api`
 
 ### Authentication Endpoints

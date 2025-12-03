@@ -208,13 +208,21 @@ export default function DashboardPage({ user, onLogout }) {
   }, [markAsUnread, toast])
 
   const handleSendEmail = useCallback(async (composeData) => {
-    // This will be handled by ComposeModal
     setShowCompose(false)
-    // Refresh sent folder if needed
+    
+    // Show success toast
+    toast({
+      title: 'Email sent',
+      description: `Email sent successfully to ${composeData.to.join(', ')}`,
+    })
+    
+    // Refresh sent folder if currently viewing it
     if (selectedFolder === 'SENT') {
-      fetchEmails(selectedFolder, 1, 20, '', '')
+      setTimeout(() => {
+        fetchEmails(selectedFolder, 1, 20, '', '')
+      }, 1000) // Small delay to allow email to appear in sent folder
     }
-  }, [selectedFolder, fetchEmails])
+  }, [selectedFolder, fetchEmails, toast])
 
 
   return (
