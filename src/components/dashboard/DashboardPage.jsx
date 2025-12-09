@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { LayoutGrid, List } from 'lucide-react'
 import Sidebar from './Sidebar'
 import MailList from './MailList'
 import MailViewer from './MailViewer'
+import KanbanBoard from './KanbanBoard'
 import ComposeModal from './ComposeModal'
 import SettingsPage from './SettingsPage'
 import SearchBar from './SearchBar'
+import { Button } from '../ui/button'
 import { useEmail } from '../../hooks/use-email'
 import { useMailbox } from '../../hooks/use-mailbox'
+import { useKanbanStatus } from '../../hooks/use-kanban-status'
 import { Alert, AlertDescription } from '../ui/alert'
 import { useToast } from '../../hooks/use-toast'
+
+const VIEW_MODE_STORAGE_KEY = 'email_view_mode'
 
 export default function DashboardPage({ user, onLogout }) {
   const [selectedFolder, setSelectedFolder] = useState('INBOX')
@@ -17,6 +23,16 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
+  
+  // View mode state: 'traditional' | 'kanban'
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+      return stored === 'kanban' ? 'kanban' : 'traditional'
+    } catch {
+      return 'traditional'
+    }
+  })
   
   const { toast } = useToast()
   
@@ -46,6 +62,10 @@ export default function DashboardPage({ user, onLogout }) {
     getUnreadCounts,
   } = useMailbox()
 
+  // Get userId for kanban status sync
+  const userId = user?.id || user?.userId || null
+  const { syncWithBackend } = useKanbanStatus(userId)
+
   // Fetch mailboxes on mount
   useEffect(() => {
     fetchMailboxes()
@@ -59,6 +79,16 @@ export default function DashboardPage({ user, onLogout }) {
       fetchEmails(selectedFolder, 1, 20, '', '')
     }
   }, [selectedFolder, fetchEmails])
+
+  // Sync kanban statuses with backend when emails are loaded
+  useEffect(() => {
+    if (emails.length > 0 && viewMode === 'kanban') {
+      const emailIds = emails.map(email => email.id)
+      syncWithBackend(emailIds).catch((error) => {
+        console.error('Failed to sync kanban statuses:', error)
+      })
+    }
+  }, [emails, viewMode, syncWithBackend])
 
   // Get unread counts from mailboxes
   const unreadCounts = useMemo(() => getUnreadCounts(), [mailboxes])
@@ -224,6 +254,16 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [selectedFolder, fetchEmails, toast])
 
+  const handleToggleViewMode = useCallback(() => {
+    const newMode = viewMode === 'traditional' ? 'kanban' : 'traditional'
+    setViewMode(newMode)
+    try {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode)
+    } catch (error) {
+      console.error('Failed to save view mode preference:', error)
+    }
+  }, [viewMode])
+
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -251,41 +291,93 @@ export default function DashboardPage({ user, onLogout }) {
       />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Search Bar - Header chung cho cột 2 và 3 */}
-        <SearchBar
-          onSearch={handleSearch}
-          pagination={pagination}
-          onPageChange={handlePageChange}
-          loading={emailLoading}
-        />
+        {/* Header with View Toggle and Search Bar */}
+        <div className="border-b border-border bg-card">
+          <div className="flex items-center gap-4 px-4 h-16">
+            {/* View Toggle Button */}
+            <Button
+              variant={viewMode === 'traditional' ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleToggleViewMode}
+              className="gap-2 flex-shrink-0"
+              title={viewMode === 'traditional' ? 'Switch to Kanban view' : 'Switch to List view'}
+            >
+              {viewMode === 'traditional' ? (
+                <>
+                  <LayoutGrid size={16} />
+                  <span className="hidden sm:inline">Kanban View</span>
+                </>
+              ) : (
+                <>
+                  <List size={16} />
+                  <span className="hidden sm:inline">List View</span>
+                </>
+              )}
+            </Button>
+            
+            {/* Search Bar */}
+            <div className="flex-1 min-w-0">
+              <SearchBar
+                onSearch={handleSearch}
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                loading={emailLoading}
+              />
+            </div>
+          </div>
+        </div>
         
         {/* Mail content area */}
-        <div className="flex-1 flex overflow-hidden">
-          <MailList
-            emails={emails}
-            selectedEmail={selectedEmail}
-            onSelectEmail={handleSelectEmail}
-            onStarEmail={handleStarEmail}
-            onDelete={handleDelete}
-            onArchive={handleArchive}
-            onSpam={handleMoveToSpam}
-            onMarkAsRead={handleMarkAsRead}
-            onMarkAsUnread={handleMarkAsUnread}
-            loading={emailLoading}
-          />
-          
-          {selectedEmail && (
-            <MailViewer
-              email={emailDetail || selectedEmail}
-              onBack={() => setSelectedEmail(null)}
-              onStar={handleStarEmail}
-              onSpam={handleMoveToSpam}
+        {viewMode === 'kanban' ? (
+          <div className="flex-1 flex overflow-hidden">
+            <KanbanBoard
+              emails={emails}
+              selectedEmail={selectedEmail}
+              onSelectEmail={handleSelectEmail}
+              loading={emailLoading}
+              user={user}
+            />
+            
+            {selectedEmail && (
+              <MailViewer
+                email={emailDetail || selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onStar={handleStarEmail}
+                onSpam={handleMoveToSpam}
+                onDelete={handleDelete}
+                onArchive={handleArchive}
+                loading={emailDetailLoading}
+              />
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 flex overflow-hidden">
+            <MailList
+              emails={emails}
+              selectedEmail={selectedEmail}
+              onSelectEmail={handleSelectEmail}
+              onStarEmail={handleStarEmail}
               onDelete={handleDelete}
               onArchive={handleArchive}
-              loading={emailDetailLoading}
+              onSpam={handleMoveToSpam}
+              onMarkAsRead={handleMarkAsRead}
+              onMarkAsUnread={handleMarkAsUnread}
+              loading={emailLoading}
             />
-          )}
-        </div>
+            
+            {selectedEmail && (
+              <MailViewer
+                email={emailDetail || selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onStar={handleStarEmail}
+                onSpam={handleMoveToSpam}
+                onDelete={handleDelete}
+                onArchive={handleArchive}
+                loading={emailDetailLoading}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {showCompose && (

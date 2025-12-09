@@ -1,6 +1,6 @@
 import { memo, useState } from 'react'
 import { Star, Paperclip, Loader2, MoreVertical } from 'lucide-react'
-import { formatDate } from '@/lib/utils/utils'
+import { formatDate, stripHtmlTags } from '@/lib/utils/utils'
 import EmailContextMenu from './EmailContextMenu'
 
 function MailList({ 
@@ -88,7 +88,7 @@ function MailList({
                   </p>
 
                   <p className={`text-xs truncate mt-1 ${!email.isRead ? 'font-bold text-foreground' : 'text-muted-foreground'}`}>
-                    {email.preview || ''}
+                    {email.preview ? stripHtmlTags(email.preview) : ''}
                   </p>
 
                   {email.attachments && email.attachments.length > 0 && (

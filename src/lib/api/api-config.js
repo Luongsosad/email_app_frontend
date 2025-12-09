@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
     SEND: '/emails/send',
     UPDATE: (id) => `/emails/${id}`,
     DELETE: (id) => `/emails/${id}`,
+    STATUS: (id) => `/emails/${id}/status`,
+    BULK_STATUS: '/emails/bulk-status',
   },
 }
 

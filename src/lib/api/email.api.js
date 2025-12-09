@@ -187,3 +187,52 @@ export const archiveEmail = async (emailId) => {
     removeLabelIds: ['INBOX'],
   })
 }
+
+/**
+ * Get email kanban status
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const getEmailStatus = async (emailId) => {
+  try {
+    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId))
+  } catch (error) {
+    console.error('Error fetching email status:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Update email kanban status
+ * @param {string} emailId - The email ID
+ * @param {string} status - The kanban status ('inbox' | 'todo' | 'in-progress' | 'done' | 'snoozed')
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const updateEmailStatus = async (emailId, status) => {
+  try {
+    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    })
+  } catch (error) {
+    console.error('Error updating email status:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get kanban statuses for multiple emails
+ * @param {string[]} emailIds - Array of email IDs
+ * @returns {Promise<{success: boolean, data?: Object[], error?: string}>}
+ */
+export const getBulkEmailStatuses = async (emailIds) => {
+  try {
+    return await apiCall(API_ENDPOINTS.EMAILS.BULK_STATUS, {
+      method: 'POST',
+      body: JSON.stringify({ emailIds }),
+    })
+  } catch (error) {
+    console.error('Error fetching bulk email statuses:', error)
+    return { success: false, error: error.message }
+  }
+}

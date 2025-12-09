@@ -1,0 +1,133 @@
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Star, Paperclip, GripVertical } from 'lucide-react'
+import { formatDate, stripHtmlTags } from '@/lib/utils/utils'
+import { cn } from '@/lib/utils/utils'
+
+export default function KanbanCard({ 
+  email, 
+  columnId,
+  isSelected = false,
+  onClick 
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: email.id,
+    data: {
+      type: 'email',
+      email,
+      columnId,
+    },
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const handleClick = (e) => {
+    // Don't trigger onClick if clicking on drag handle
+    if (e.target.closest('[data-drag-handle]')) {
+      return
+    }
+    if (onClick) {
+      onClick(email)
+    }
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'relative w-full bg-card border border-border rounded-lg shadow-sm text-left transition-all',
+        isDragging && 'shadow-lg rotate-2',
+        !isDragging && 'hover:shadow-md hover:border-primary/50',
+        isSelected && 'ring-2 ring-primary border-primary',
+        !email.isRead && 'bg-accent/10 border-accent/20'
+      )}
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        data-drag-handle
+        className="absolute left-2 top-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <GripVertical size={16} />
+      </div>
+
+      <button
+        onClick={handleClick}
+        className="w-full p-4 pl-8 text-left"
+      >
+      <div className="flex flex-col gap-2">
+        {/* Header: Star and Sender */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {email.isStarred && (
+              <Star 
+                size={16} 
+                className="text-primary fill-primary flex-shrink-0" 
+              />
+            )}
+            <p className={cn(
+              'text-sm font-medium truncate',
+              !email.isRead ? 'text-foreground font-semibold' : 'text-muted-foreground'
+            )}>
+              {email.senderName || 'Unknown Sender'}
+            </p>
+          </div>
+          <span className={cn(
+            'text-xs whitespace-nowrap flex-shrink-0',
+            !email.isRead ? 'text-foreground font-semibold' : 'text-muted-foreground'
+          )}>
+            {formatDate(new Date(email.timestamp))}
+          </span>
+        </div>
+
+        {/* Subject */}
+        <p className={cn(
+          'text-sm font-medium line-clamp-2',
+          !email.isRead ? 'text-foreground font-semibold' : 'text-foreground'
+        )}>
+          {email.subject || '(No Subject)'}
+        </p>
+
+        {/* Preview/Body snippet */}
+        {email.preview && (
+          <p className={cn(
+            'text-xs line-clamp-3 text-muted-foreground',
+            !email.isRead && 'text-foreground/80'
+          )}>
+            {stripHtmlTags(email.preview)}
+          </p>
+        )}
+
+        {/* Attachments indicator */}
+        {email.attachments && email.attachments.length > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <Paperclip size={12} className="text-muted-foreground" />
+            <span className="text-xs text-muted-foreground">
+              {email.attachments.length} attachment{email.attachments.length > 1 ? 's' : ''}
+            </span>
+          </div>
+        )}
+
+        {/* Unread indicator */}
+        {!email.isRead && (
+          <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
+        )}
+      </div>
+      </button>
+    </div>
+  )
+}
+

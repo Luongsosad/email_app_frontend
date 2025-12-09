@@ -48,9 +48,9 @@ function SearchBar({
   const currentPage = pagination ? pagination.page : 1
 
   return (
-    <div className="border-b border-border bg-card h-16">
+    <div className="h-full">
       {/* Search and Pagination Row */}
-      <div className="flex items-center justify-between px-4 py-3 gap-4">
+      <div className="flex items-center justify-between gap-4 h-full">
         {/* Search */}
         <div className="flex-1 max-w-2xl">
           <div className="relative">
