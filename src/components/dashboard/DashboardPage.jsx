@@ -7,6 +7,7 @@ import KanbanBoard from './KanbanBoard'
 import ComposeModal from './ComposeModal'
 import SettingsPage from './SettingsPage'
 import SearchBar from './SearchBar'
+import SummaryNotification from '../ui/SummaryNotification'
 import { Button } from '../ui/button'
 import { useEmail } from '../../hooks/use-email'
 import { useMailbox } from '../../hooks/use-mailbox'
@@ -24,6 +25,13 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
+  
+  // Summary notification state
+  const [summaryNotification, setSummaryNotification] = useState({
+    isLoading: false,
+    emailId: null,
+    emailSubject: null,
+  })
   
   // View mode state: 'traditional' | 'kanban'
   const [viewMode, setViewMode] = useState(() => {
@@ -377,6 +385,100 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [viewMode])
 
+  // Summary notification handlers
+  const handleSummaryStart = useCallback((emailId, emailSubject) => {
+    setSummaryNotification({
+      isLoading: true,
+      emailId,
+      emailSubject,
+    })
+  }, [])
+
+  const handleSummaryComplete = useCallback((emailId, summary) => {
+    setSummaryNotification(prev => ({
+      ...prev,
+      isLoading: false,
+    }))
+  }, [])
+
+  const handleSummaryNotificationClick = useCallback(async (emailId) => {
+    console.log('[DashboardPage] Notification clicked for email:', emailId)
+    
+    // Dismiss notification immediately
+    setSummaryNotification({
+      isLoading: false,
+      emailId: null,
+      emailSubject: null,
+    })
+    
+    // If already selected, just dismiss
+    if (selectedEmail?.id === emailId) {
+      console.log('[DashboardPage] Email already selected')
+      return
+    }
+    
+    // Try to find email in current list
+    let email = emails.find(e => e.id === emailId)
+    
+    // If not found, search in INBOX
+    if (!email) {
+      console.log('[DashboardPage] Searching in INBOX...')
+      try {
+        const { fetchEmailsByMailbox } = await import('@/lib/api/email.api')
+        const result = await fetchEmailsByMailbox('INBOX', 1, 100)
+        if (result.success && result.data?.emails) {
+          email = result.data.emails.find(e => e.id === emailId)
+        }
+      } catch (error) {
+        console.error('[DashboardPage] Search failed:', error)
+      }
+    }
+    
+    // If still not found, fetch detail
+    if (!email) {
+      console.log('[DashboardPage] Fetching detail...')
+      try {
+        await fetchEmailDetail(emailId)
+        await new Promise(resolve => setTimeout(resolve, 150))
+        
+        if (emailDetail?.id === emailId) {
+          email = emailDetail
+        } else {
+          email = {
+            id: emailId,
+            subject: 'Email',
+            from: '',
+            timestamp: new Date(),
+            isRead: true,
+            isStarred: false,
+          }
+        }
+      } catch (error) {
+        console.error('[DashboardPage] Failed:', error)
+        toast({
+          title: 'Error',
+          description: 'Could not open email',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+    
+    // Select email
+    if (email) {
+      setSelectedEmail(email)
+      fetchEmailDetail(email.id)
+    }
+  }, [emails, selectedEmail, emailDetail, fetchEmailDetail, toast])
+
+  const handleDismissSummaryNotification = useCallback(() => {
+    setSummaryNotification({
+      isLoading: false,
+      emailId: null,
+      emailSubject: null,
+    })
+  }, [])
+
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -390,6 +492,16 @@ export default function DashboardPage({ user, onLogout }) {
           </Alert>
         </div>
       )}
+      
+      {/* Summary notification */}
+      <SummaryNotification
+        isLoading={summaryNotification.isLoading}
+        emailId={summaryNotification.emailId}
+        emailSubject={summaryNotification.emailSubject}
+        onClick={handleSummaryNotificationClick}
+        onDismiss={handleDismissSummaryNotification}
+        onComplete={handleDismissSummaryNotification}
+      />
 
       <Sidebar
         selectedFolder={selectedFolder}
@@ -462,6 +574,8 @@ export default function DashboardPage({ user, onLogout }) {
                 onArchive={handleArchive}
                 onSnooze={handleSnooze}
                 loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>
@@ -490,6 +604,8 @@ export default function DashboardPage({ user, onLogout }) {
                 onArchive={handleArchive}
                 onSnooze={handleSnooze}
                 loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>

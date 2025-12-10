@@ -1,4 +1,4 @@
-import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2, Clock, Sparkles } from 'lucide-react'
+import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2, Clock, Sparkles, Paperclip } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils/utils'
 import { useState, useMemo, useEffect } from 'react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
@@ -17,6 +17,8 @@ export default function MailViewer({
   onArchive,
   onSnooze,
   loading,
+  onSummaryStart,
+  onSummaryComplete,
 }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showConfirmSpam, setShowConfirmSpam] = useState(false)
@@ -53,12 +55,28 @@ export default function MailViewer({
     if (!email?.id) return
     
     setLoadingSummary(true)
+    
+    // Notify parent that summary generation started
+    if (onSummaryStart) {
+      onSummaryStart(email.id, email.subject)
+    }
+    
     try {
       // Force regenerate if summary already exists
       const force = summary !== null
       const response = await emailApi.summarizeEmail(email.id, force)
       if (response.success && response.data?.summary) {
         setSummary(response.data.summary)
+        
+        // Notify parent that summary is complete with the new summary
+        if (onSummaryComplete) {
+          onSummaryComplete(email.id, response.data.summary)
+        }
+        
+        // Trigger a custom event for KanbanCards to refresh
+        window.dispatchEvent(new CustomEvent('emailSummaryUpdated', { 
+          detail: { emailId: email.id, summary: response.data.summary } 
+        }))
       } else {
         alert('Failed to generate summary. Please try again.')
       }
@@ -154,7 +172,7 @@ export default function MailViewer({
   }, [email.body])
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l border-border">
       {/* Header */}
       <div className="border-b border-border p-4 flex items-center justify-between">
         <button
@@ -265,7 +283,7 @@ export default function MailViewer({
             <h1 className="text-3xl font-bold mb-4 text-foreground">{email.subject || '(No Subject)'}</h1>
 
             {/* From/To Info */}
-            <div className="bg-muted/30 rounded-lg p-4 mb-6">
+            <div className="bg-muted/30 border border-border rounded-lg p-4 mb-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-lg font-bold text-primary-foreground">
@@ -292,7 +310,7 @@ export default function MailViewer({
 
             {/* To recipients */}
             {email.to && (
-              <div className="mb-6 text-sm">
+              <div className="mb-6 text-sm bg-muted/20 border border-border rounded-lg p-3">
                 <p className="text-muted-foreground">
                   <strong>To:</strong> {Array.isArray(email.to) ? email.to.join(', ') : email.to}
                 </p>
@@ -300,7 +318,8 @@ export default function MailViewer({
             )}
 
             {/* Summary */}
-            {loadingSummary && !summary && (
+            {/* Don't show inline loading if using global notification */}
+            {loadingSummary && !summary && !onSummaryStart && (
               <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
@@ -344,7 +363,7 @@ export default function MailViewer({
             )}
 
             {/* Body */}
-            <div className="mb-6">
+            <div className="mb-6 border border-border rounded-lg p-4 bg-card">
               <div 
                 className="email-content text-foreground"
                 dangerouslySetInnerHTML={{ __html: sanitizedBody }}
@@ -353,8 +372,11 @@ export default function MailViewer({
 
             {/* Attachments */}
             {email.attachments && email.attachments.length > 0 && (
-              <div className="border-t border-border pt-6">
-                <h3 className="font-semibold mb-3 text-foreground">Attachments ({email.attachments.length})</h3>
+              <div className="border-t-2 border-border pt-6 mt-6">
+                <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+                  <Paperclip size={18} />
+                  Attachments ({email.attachments.length})
+                </h3>
                 <div className="space-y-2">
                   {email.attachments.map(attachment => (
                     <button

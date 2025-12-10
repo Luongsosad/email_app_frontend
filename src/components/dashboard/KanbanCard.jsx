@@ -44,6 +44,20 @@ export default function KanbanCard({
     }
     
     fetchSummary()
+    
+    // Listen for summary updates from other components
+    const handleSummaryUpdate = (event) => {
+      if (event.detail.emailId === email.id) {
+        console.log('[KanbanCard] Updating summary for email:', email.id)
+        setSummary(event.detail.summary)
+      }
+    }
+    
+    window.addEventListener('emailSummaryUpdated', handleSummaryUpdate)
+    
+    return () => {
+      window.removeEventListener('emailSummaryUpdated', handleSummaryUpdate)
+    }
   }, [email.id])
 
   const style = {
