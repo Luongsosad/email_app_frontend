@@ -54,7 +54,9 @@ export default function MailViewer({
     
     setLoadingSummary(true)
     try {
-      const response = await emailApi.summarizeEmail(email.id)
+      // Force regenerate if summary already exists
+      const force = summary !== null
+      const response = await emailApi.summarizeEmail(email.id, force)
       if (response.success && response.data?.summary) {
         setSummary(response.data.summary)
       } else {
@@ -207,7 +209,13 @@ export default function MailViewer({
                 ? 'text-amber-500 hover:text-amber-600' 
                 : 'text-muted-foreground hover:text-foreground'
             } ${loadingSummary ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={summary ? 'Regenerate Summary' : 'Generate Summary'}
+            title={
+              loadingSummary 
+                ? 'AI đang tạo tóm tắt...' 
+                : summary 
+                  ? 'Tạo lại tóm tắt với AI' 
+                  : 'Tạo tóm tắt với AI'
+            }
           >
             {loadingSummary ? (
               <Loader2 size={20} className="animate-spin" />
@@ -292,6 +300,27 @@ export default function MailViewer({
             )}
 
             {/* Summary */}
+            {loadingSummary && !summary && (
+              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <Loader2 size={20} className="text-amber-600 dark:text-amber-400 animate-spin" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2 text-base flex items-center gap-2">
+                      AI đang tạo tóm tắt...
+                      <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
+                        Gemini
+                      </span>
+                    </h3>
+                    <p className="text-amber-700 dark:text-amber-300 leading-relaxed text-sm">
+                      Vui lòng chờ trong giây lát, AI đang phân tích và tóm tắt nội dung email...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {summary && (
               <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
                 <div className="flex items-start gap-3">
@@ -304,6 +333,9 @@ export default function MailViewer({
                       <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
                         Gemini
                       </span>
+                      {loadingSummary && (
+                        <Loader2 size={14} className="text-amber-600 dark:text-amber-400 animate-spin" />
+                      )}
                     </h3>
                     <p className="text-amber-800 dark:text-amber-200 leading-relaxed">{summary}</p>
                   </div>

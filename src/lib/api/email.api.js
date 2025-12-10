@@ -260,11 +260,12 @@ export const checkExpiredSnoozes = async () => {
 /**
  * Generate or retrieve summary for an email
  * @param {string} emailId - The email ID
+ * @param {boolean} force - Force regenerate summary even if one exists
  * @returns {Promise<{success: boolean, data?: {summary: string, summarizedAt: Date, cached: boolean}, error?: string}>}
  */
-export const summarizeEmail = async (emailId) => {
+export const summarizeEmail = async (emailId, force = false) => {
   try {
-    return await apiCall(`/emails/${emailId}/summarize`, {
+    return await apiCall(`/emails/${emailId}/summarize?force=${force}`, {
       method: 'POST',
     })
   } catch (error) {
