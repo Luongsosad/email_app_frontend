@@ -44,6 +44,15 @@ export default function Sidebar({
           })
         }
       })
+      
+      // Add snoozed folder (not a Gmail label, handled separately)
+      const snoozedConfig = FOLDER_LABELS['snoozed']
+      folderData.push({
+        key: 'snoozed',
+        label: snoozedConfig.label,
+        icon: snoozedConfig.icon,
+        unreadCount: 0, // Will be updated when snoozed emails are fetched
+      })
     } else {
       // Fallback to default folders if no mailboxes loaded
       Object.entries(FOLDER_LABELS).forEach(([key, config]) => {

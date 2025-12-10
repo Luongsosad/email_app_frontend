@@ -189,6 +189,105 @@ export const archiveEmail = async (emailId) => {
 }
 
 /**
+ * Snooze an email until a specific time
+ * @param {string} emailId - The email ID
+ * @param {Date|string} snoozeUntil - ISO 8601 date string or Date object
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const snoozeEmail = async (emailId, snoozeUntil) => {
+  try {
+    console.log('[snoozeEmail] Snoozing email:', emailId, 'until:', snoozeUntil)
+    const snoozeDate = typeof snoozeUntil === 'string' ? snoozeUntil : snoozeUntil.toISOString()
+    const result = await apiCall(`/emails/${emailId}/snooze`, {
+      method: 'POST',
+      body: JSON.stringify({ snoozeUntil: snoozeDate }),
+    })
+    console.log('[snoozeEmail] Result:', result)
+    return result
+  } catch (error) {
+    console.error('Error snoozing email:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Unsnooze an email (return to inbox)
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const unsnoozeEmail = async (emailId) => {
+  try {
+    return await apiCall(`/emails/${emailId}/unsnooze`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Error unsnoozing email:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get all snoozed emails
+ * @returns {Promise<{success: boolean, data?: {emailIds: string[], total: number}, error?: string}>}
+ */
+export const getSnoozedEmails = async () => {
+  try {
+    console.log('[getSnoozedEmails] Fetching snoozed emails...')
+    const result = await apiCall('/emails/snoozed')
+    console.log('[getSnoozedEmails] Result:', result)
+    return result
+  } catch (error) {
+    console.error('Error fetching snoozed emails:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Check and restore expired snoozed emails
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const checkExpiredSnoozes = async () => {
+  try {
+    return await apiCall('/emails/check-expired-snoozes', {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Error checking expired snoozes:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Generate or retrieve summary for an email
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: {summary: string, summarizedAt: Date, cached: boolean}, error?: string}>}
+ */
+export const summarizeEmail = async (emailId) => {
+  try {
+    return await apiCall(`/emails/${emailId}/summarize`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Error summarizing email:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
+ * Get existing summary for an email
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: {summary: string, summarizedAt: Date}, error?: string}>}
+ */
+export const getEmailSummary = async (emailId) => {
+  try {
+    return await apiCall(`/emails/${emailId}/summary`)
+  } catch (error) {
+    console.error('Error getting email summary:', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
  * Get email kanban status
  * @param {string} emailId - The email ID
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}

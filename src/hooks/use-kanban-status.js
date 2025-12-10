@@ -94,6 +94,18 @@ export function useKanbanStatus(userId = null) {
       };
 
       emails.forEach((email) => {
+        // First check if email is actively snoozed
+        if (email.snoozedUntil) {
+          const snoozeDate = new Date(email.snoozedUntil);
+          const now = new Date();
+          if (snoozeDate > now) {
+            // Email is actively snoozed, put in snoozed column
+            columns["snoozed"].push(email);
+            return;
+          }
+        }
+
+        // Otherwise, use the stored kanban status
         const columnId = getEmailStatus(email.id);
         if (columns[columnId]) {
           columns[columnId].push(email);
