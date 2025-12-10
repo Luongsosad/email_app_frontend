@@ -83,16 +83,45 @@ export default function DashboardPage({ user, onLogout }) {
 
   // Fetch emails when folder or view mode changes
   useEffect(() => {
-    if (selectedFolder) {
+    const fetchAllEmails = async () => {
+      if (!selectedFolder) return
+      
       setSearchQuery('')
       setCurrentPageToken('')
       
-      // In Kanban view, always fetch INBOX to get all emails
-      // (snoozed emails will be organized into columns)
-      const folderToFetch = viewMode === 'kanban' ? 'INBOX' : selectedFolder
-      fetchEmails(folderToFetch, 1, 20, '', '')
+      if (viewMode === 'kanban') {
+        // In Kanban view, fetch both INBOX and SNOOZED emails
+        try {
+          // Fetch INBOX emails
+          await fetchEmails('INBOX', 1, 20, '', '')
+          
+          // Also fetch snoozed emails and merge them
+          const snoozedResult = await emailApi.getSnoozedEmails()
+          if (snoozedResult.success && snoozedResult.data) {
+            setEmails(prevEmails => {
+              // Create a map to avoid duplicates
+              const emailMap = new Map()
+              
+              // Add existing emails
+              prevEmails.forEach(email => emailMap.set(email.id, email))
+              
+              // Add/update snoozed emails
+              snoozedResult.data.forEach(email => emailMap.set(email.id, email))
+              
+              return Array.from(emailMap.values())
+            })
+          }
+        } catch (error) {
+          console.error('[DashboardPage] Failed to fetch kanban emails:', error)
+        }
+      } else {
+        // In List view, fetch selected folder
+        fetchEmails(selectedFolder, 1, 20, '', '')
+      }
     }
-  }, [selectedFolder, fetchEmails, viewMode])
+    
+    fetchAllEmails()
+  }, [selectedFolder, viewMode]) // Removed fetchEmails from deps to avoid infinite loop
 
   // Sync kanban statuses with backend when emails are loaded
   useEffect(() => {

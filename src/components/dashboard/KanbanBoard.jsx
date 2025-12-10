@@ -82,15 +82,14 @@ export default function KanbanBoard({
       snoozeDate.setHours(snoozeDate.getHours() + 6)
       
       try {
+        // snoozeEmail API already sets status to SNOOZED, no need to call updateStatusOnBackend
         const result = await emailApi.snoozeEmail(emailId, snoozeDate.toISOString())
         if (result.success) {
           toast({
             title: 'Email snoozed',
             description: 'Email will reappear in 6 hours',
           })
-          // Also update the kanban status
-          await updateStatusOnBackend(emailId, destinationColumnId)
-          // Refresh the email list
+          // Refresh the email list to reflect the change
           if (onRefresh) {
             onRefresh()
           }

@@ -160,12 +160,17 @@ export function useKanbanStatus(userId = null) {
             backendStatusMap[status.emailId] = status.status;
           });
 
-          // Merge with existing statuses (backend takes precedence)
+          // Merge with existing statuses (backend takes precedence for these specific emails)
+          // IMPORTANT: Keep statuses for emails NOT in the current batch
           const mergedMap = {
-            ...statusMap,
-            ...backendStatusMap,
+            ...statusMap, // Keep all existing statuses
+            ...backendStatusMap, // Update only the synced emails
           };
+          
           saveStatuses(mergedMap);
+          
+          console.log(`[useKanbanStatus] Synced ${Object.keys(backendStatusMap).length} statuses, total in map: ${Object.keys(mergedMap).length}`);
+          
           return { success: true };
         } else {
           return {
