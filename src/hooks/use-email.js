@@ -25,6 +25,31 @@ export function useEmail() {
     setError(null)
     setSearchError(null)
     try {
+      // Handle snoozed folder separately
+      if (mailboxId === 'snoozed') {
+        console.log('[use-email] Fetching snoozed emails...')
+        const response = await emailApi.getSnoozedEmails()
+        console.log('[use-email] Snoozed response:', response)
+        if (response.success && response.data) {
+          // Backend now returns array of emails directly with snoozeUntil field
+          const snoozedEmails = response.data || []
+          console.log('[use-email] Snoozed emails:', snoozedEmails)
+          setEmails(snoozedEmails)
+          setPagination({
+            page: 1,
+            pageSize: snoozedEmails.length,
+            total: snoozedEmails.length,
+            nextPageToken: null,
+          })
+          return { success: true, data: { emails: snoozedEmails } }
+        } else {
+          console.error('[use-email] Failed to fetch snoozed emails:', response.error)
+          setError(response.error || 'Failed to fetch snoozed emails')
+          return { success: false, error: response.error }
+        }
+      }
+      
+      // Regular mailbox fetch
       const response = await emailApi.fetchEmailsByMailbox(mailboxId, page, pageSize, search, pageToken)
       if (response.success && response.data) {
         setEmails(response.data.emails || [])
@@ -279,5 +304,6 @@ export function useEmail() {
     moveToSpam,
     archiveEmail,
     deleteEmail,
+    setEmails, // Export setEmails for direct state updates
   }
 }

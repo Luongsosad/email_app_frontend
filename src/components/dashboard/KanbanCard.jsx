@@ -1,8 +1,10 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Star, Paperclip, GripVertical } from 'lucide-react'
+import { Star, Paperclip, GripVertical, Sparkles } from 'lucide-react'
 import { formatDate, stripHtmlTags } from '@/lib/utils/utils'
 import { cn } from '@/lib/utils/utils'
+import { useState, useEffect } from 'react'
+import { emailApi } from '@/lib/api'
 
 export default function KanbanCard({ 
   email, 
@@ -10,6 +12,8 @@ export default function KanbanCard({
   isSelected = false,
   onClick 
 }) {
+  const [summary, setSummary] = useState(null)
+
   const {
     attributes,
     listeners,
@@ -25,6 +29,36 @@ export default function KanbanCard({
       columnId,
     },
   })
+
+  // Fetch summary when card mounts
+  useEffect(() => {
+    const fetchSummary = async () => {
+      try {
+        const response = await emailApi.getEmailSummary(email.id)
+        if (response.success && response.data?.summary) {
+          setSummary(response.data.summary)
+        }
+      } catch (err) {
+        // Silently fail - summary is optional
+      }
+    }
+    
+    fetchSummary()
+    
+    // Listen for summary updates from other components
+    const handleSummaryUpdate = (event) => {
+      if (event.detail.emailId === email.id) {
+        console.log('[KanbanCard] Updating summary for email:', email.id)
+        setSummary(event.detail.summary)
+      }
+    }
+    
+    window.addEventListener('emailSummaryUpdated', handleSummaryUpdate)
+    
+    return () => {
+      window.removeEventListener('emailSummaryUpdated', handleSummaryUpdate)
+    }
+  }, [email.id])
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -101,8 +135,18 @@ export default function KanbanCard({
           {email.subject || '(No Subject)'}
         </p>
 
+        {/* Summary (if available) */}
+        {summary && (
+          <div className="flex items-start gap-1.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1">
+            <Sparkles size={12} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800 dark:text-amber-200 line-clamp-2">
+              {summary}
+            </p>
+          </div>
+        )}
+
         {/* Preview/Body snippet */}
-        {email.preview && (
+        {email.preview && !summary && (
           <p className={cn(
             'text-xs line-clamp-3 text-muted-foreground',
             !email.isRead && 'text-foreground/80'

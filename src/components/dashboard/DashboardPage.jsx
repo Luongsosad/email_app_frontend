@@ -7,6 +7,7 @@ import KanbanBoard from './KanbanBoard'
 import ComposeModal from './ComposeModal'
 import SettingsPage from './SettingsPage'
 import SearchBar from './SearchBar'
+import SummaryNotification from '../ui/SummaryNotification'
 import SearchResultsView from './SearchResultsView'
 import { Button } from '../ui/button'
 import { useEmail } from '../../hooks/use-email'
@@ -14,6 +15,7 @@ import { useMailbox } from '../../hooks/use-mailbox'
 import { useKanbanStatus } from '../../hooks/use-kanban-status'
 import { Alert, AlertDescription } from '../ui/alert'
 import { useToast } from '../../hooks/use-toast'
+import { emailApi } from '../../lib/api'
 
 const VIEW_MODE_STORAGE_KEY = 'email_view_mode'
 
@@ -24,6 +26,13 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
+  
+  // Summary notification state
+  const [summaryNotification, setSummaryNotification] = useState({
+    isLoading: false,
+    emailId: null,
+    emailSubject: null,
+  })
   const [isSearchMode, setIsSearchMode] = useState(false)
   
   // View mode state: 'traditional' | 'kanban'
@@ -57,6 +66,7 @@ export default function DashboardPage({ user, onLogout }) {
     moveToSpam,
     archiveEmail,
     deleteEmail,
+    setEmails, // Added to allow direct state updates
   } = useEmail()
   
   const {
@@ -76,14 +86,47 @@ export default function DashboardPage({ user, onLogout }) {
     fetchMailboxes()
   }, [fetchMailboxes])
 
-  // Fetch emails when folder changes
+  // Fetch emails when folder or view mode changes
   useEffect(() => {
-    if (selectedFolder) {
+    const fetchAllEmails = async () => {
+      if (!selectedFolder) return
+      
       setSearchQuery('')
       setCurrentPageToken('')
-      fetchEmails(selectedFolder, 1, 20, '', '')
+      
+      if (viewMode === 'kanban') {
+        // In Kanban view, fetch both INBOX and SNOOZED emails
+        try {
+          // Fetch INBOX emails
+          await fetchEmails('INBOX', 1, 20, '', '')
+          
+          // Also fetch snoozed emails and merge them
+          const snoozedResult = await emailApi.getSnoozedEmails()
+          if (snoozedResult.success && snoozedResult.data) {
+            setEmails(prevEmails => {
+              // Create a map to avoid duplicates
+              const emailMap = new Map()
+              
+              // Add existing emails
+              prevEmails.forEach(email => emailMap.set(email.id, email))
+              
+              // Add/update snoozed emails
+              snoozedResult.data.forEach(email => emailMap.set(email.id, email))
+              
+              return Array.from(emailMap.values())
+            })
+          }
+        } catch (error) {
+          console.error('[DashboardPage] Failed to fetch kanban emails:', error)
+        }
+      } else {
+        // In List view, fetch selected folder
+        fetchEmails(selectedFolder, 1, 20, '', '')
+      }
     }
-  }, [selectedFolder, fetchEmails])
+    
+    fetchAllEmails()
+  }, [selectedFolder, viewMode]) // Removed fetchEmails from deps to avoid infinite loop
 
   // Sync kanban statuses with backend when emails are loaded
   useEffect(() => {
@@ -95,8 +138,77 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [emails, viewMode, syncWithBackend])
 
+  // Check for expired snoozes periodically (every 30 seconds)
+  useEffect(() => {
+    const checkExpiredSnoozes = async () => {
+      try {
+        const result = await emailApi.checkExpiredSnoozes()
+        // If any snoozes were restored, update local state immediately
+        if (result?.data?.restoredCount > 0 && result?.data?.restoredEmailIds) {
+          console.log('[DashboardPage] Expired snoozes detected:', result.data.restoredEmailIds)
+          
+          // Update local state to remove snoozedUntil from expired emails
+          setEmails(prevEmails =>
+            prevEmails.map(email =>
+              result.data.restoredEmailIds.includes(email.id)
+                ? { ...email, snoozedUntil: null }
+                : email
+            )
+          )
+          
+          // Also refresh from backend to ensure consistency
+          fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)
+        }
+      } catch (err) {
+        console.error('Failed to check expired snoozes:', err)
+      }
+    }
+
+    // Check immediately on mount
+    checkExpiredSnoozes()
+
+    // Then check every 30 seconds for better responsiveness
+    const interval = setInterval(checkExpiredSnoozes, 30000)
+
+    return () => clearInterval(interval)
+  }, [selectedFolder, pagination, searchQuery, currentPageToken, fetchEmails, setEmails])
+
   // Get unread counts from mailboxes
   const unreadCounts = useMemo(() => getUnreadCounts(), [mailboxes])
+
+  // Filter emails based on snooze status and current folder
+  // This applies to BOTH List View and Kanban View to ensure consistency
+  const filteredEmails = useMemo(() => {
+    // In Kanban view, we want to show ALL emails (including snoozed ones)
+    // They will be organized into appropriate columns
+    if (viewMode === 'kanban') {
+      return emails
+    }
+    
+    // In List view, filter based on selected folder
+    // If we're in the snoozed folder, only show snoozed emails
+    if (selectedFolder === 'snoozed') {
+      return emails.filter(email => {
+        if (email.snoozedUntil) {
+          const snoozeDate = new Date(email.snoozedUntil)
+          const now = new Date()
+          return snoozeDate > now // Only show if actively snoozed
+        }
+        return false
+      })
+    }
+    
+    // For all other folders (INBOX, SENT, etc.), exclude actively snoozed emails
+    return emails.filter(email => {
+      // Check if email is actively snoozed (has future snoozedUntil date)
+      if (email.snoozedUntil) {
+        const snoozeDate = new Date(email.snoozedUntil)
+        const now = new Date()
+        return snoozeDate <= now // Only show if snooze has expired
+      }
+      return true // Show if not snoozed
+    })
+  }, [emails, selectedFolder, viewMode])
 
   const handleFolderSelect = useCallback((folder) => {
     setSelectedFolder(folder)
@@ -242,6 +354,44 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [archiveEmail, selectedFolder, pagination, searchQuery, currentPageToken, fetchEmails, toast])
 
+  const handleSnooze = useCallback(async (emailId, snoozeUntil) => {
+    try {
+      console.log('[DashboardPage] Snoozing email:', emailId, 'until:', snoozeUntil)
+      const result = await emailApi.snoozeEmail(emailId, snoozeUntil)
+      console.log('[DashboardPage] Snooze result:', result)
+      
+      if (result?.success) {
+        toast({
+          title: 'Email snoozed',
+          description: `Email will reappear on ${new Date(snoozeUntil).toLocaleDateString()}`,
+        })
+        // Close the email viewer
+        setSelectedEmail(null)
+        
+        // Update local state immediately by adding snoozedUntil to the email
+        setEmails(prevEmails => 
+          prevEmails.map(email => 
+            email.id === emailId 
+              ? { ...email, snoozedUntil: snoozeUntil }
+              : email
+          )
+        )
+      } else {
+        toast({
+          title: 'Error',
+          description: result?.error || 'Failed to snooze email',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to snooze email',
+        variant: 'destructive',
+      })
+    }
+  }, [toast, setEmails])
+
   const handleMarkAsRead = useCallback(async (emailId) => {
     const result = await markAsRead(emailId)
     
@@ -307,6 +457,100 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [viewMode])
 
+  // Summary notification handlers
+  const handleSummaryStart = useCallback((emailId, emailSubject) => {
+    setSummaryNotification({
+      isLoading: true,
+      emailId,
+      emailSubject,
+    })
+  }, [])
+
+  const handleSummaryComplete = useCallback((emailId, summary) => {
+    setSummaryNotification(prev => ({
+      ...prev,
+      isLoading: false,
+    }))
+  }, [])
+
+  const handleSummaryNotificationClick = useCallback(async (emailId) => {
+    console.log('[DashboardPage] Notification clicked for email:', emailId)
+    
+    // Dismiss notification immediately
+    setSummaryNotification({
+      isLoading: false,
+      emailId: null,
+      emailSubject: null,
+    })
+    
+    // If already selected, just dismiss
+    if (selectedEmail?.id === emailId) {
+      console.log('[DashboardPage] Email already selected')
+      return
+    }
+    
+    // Try to find email in current list
+    let email = emails.find(e => e.id === emailId)
+    
+    // If not found, search in INBOX
+    if (!email) {
+      console.log('[DashboardPage] Searching in INBOX...')
+      try {
+        const { fetchEmailsByMailbox } = await import('@/lib/api/email.api')
+        const result = await fetchEmailsByMailbox('INBOX', 1, 100)
+        if (result.success && result.data?.emails) {
+          email = result.data.emails.find(e => e.id === emailId)
+        }
+      } catch (error) {
+        console.error('[DashboardPage] Search failed:', error)
+      }
+    }
+    
+    // If still not found, fetch detail
+    if (!email) {
+      console.log('[DashboardPage] Fetching detail...')
+      try {
+        await fetchEmailDetail(emailId)
+        await new Promise(resolve => setTimeout(resolve, 150))
+        
+        if (emailDetail?.id === emailId) {
+          email = emailDetail
+        } else {
+          email = {
+            id: emailId,
+            subject: 'Email',
+            from: '',
+            timestamp: new Date(),
+            isRead: true,
+            isStarred: false,
+          }
+        }
+      } catch (error) {
+        console.error('[DashboardPage] Failed:', error)
+        toast({
+          title: 'Error',
+          description: 'Could not open email',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+    
+    // Select email
+    if (email) {
+      setSelectedEmail(email)
+      fetchEmailDetail(email.id)
+    }
+  }, [emails, selectedEmail, emailDetail, fetchEmailDetail, toast])
+
+  const handleDismissSummaryNotification = useCallback(() => {
+    setSummaryNotification({
+      isLoading: false,
+      emailId: null,
+      emailSubject: null,
+    })
+  }, [])
+
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -320,6 +564,16 @@ export default function DashboardPage({ user, onLogout }) {
           </Alert>
         </div>
       )}
+      
+      {/* Summary notification */}
+      <SummaryNotification
+        isLoading={summaryNotification.isLoading}
+        emailId={summaryNotification.emailId}
+        emailSubject={summaryNotification.emailSubject}
+        onClick={handleSummaryNotificationClick}
+        onDismiss={handleDismissSummaryNotification}
+        onComplete={handleDismissSummaryNotification}
+      />
 
       <Sidebar
         selectedFolder={selectedFolder}
@@ -386,11 +640,12 @@ export default function DashboardPage({ user, onLogout }) {
         {viewMode === 'kanban' && !isSearchMode ? (
           <div className="flex-1 flex overflow-hidden">
             <KanbanBoard
-              emails={emails}
+              emails={filteredEmails}
               selectedEmail={selectedEmail}
               onSelectEmail={handleSelectEmail}
               loading={emailLoading}
               user={user}
+              onRefresh={() => fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)}
             />
             
             {selectedEmail && (
@@ -427,14 +682,46 @@ export default function DashboardPage({ user, onLogout }) {
                 onSpam={handleMoveToSpam}
                 onDelete={handleDelete}
                 onArchive={handleArchive}
+                onSnooze={handleSnooze}
                 loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
+              />
+            )}
+          </div>
+        ) : isSearchMode ? (
+          <div className="flex-1 flex overflow-hidden">
+            <SearchResultsView
+              emails={emails}
+              loading={emailLoading}
+              error={emailError}
+              searchQuery={searchQuery}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              selectedEmail={selectedEmail}
+              onSelectEmail={handleSelectEmail}
+              onBack={handleClearSearch}
+            />
+
+            {selectedEmail && (
+              <MailViewer
+                email={emailDetail || selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onStar={handleStarEmail}
+                onSpam={handleMoveToSpam}
+                onDelete={handleDelete}
+                onArchive={handleArchive}
+                onSnooze={handleSnooze}
+                loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>
         ) : (
           <div className="flex-1 flex overflow-hidden">
             <MailList
-              emails={emails}
+              emails={filteredEmails}
               selectedEmail={selectedEmail}
               onSelectEmail={handleSelectEmail}
               onStarEmail={handleStarEmail}
@@ -454,7 +741,10 @@ export default function DashboardPage({ user, onLogout }) {
                 onSpam={handleMoveToSpam}
                 onDelete={handleDelete}
                 onArchive={handleArchive}
+                onSnooze={handleSnooze}
                 loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>

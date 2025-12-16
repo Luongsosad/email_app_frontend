@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react'
 import KanbanColumn from './KanbanColumn'
 import { useKanbanStatus } from '../../hooks/use-kanban-status'
 import { useToast } from '../../hooks/use-toast'
+import { emailApi } from '../../lib/api'
 
 const COLUMNS = [
   { id: 'inbox', title: 'Inbox' },
@@ -20,6 +21,7 @@ export default function KanbanBoard({
   onSelectEmail,
   loading = false,
   user = null,
+  onRefresh,
 }) {
   const { toast } = useToast()
   
@@ -74,7 +76,41 @@ export default function KanbanBoard({
       return
     }
 
-    // Update status on backend
+    // Special handling for SNOOZED column - automatically snooze for 6 hours
+    if (destinationColumnId === 'snoozed') {
+      const snoozeDate = new Date()
+      snoozeDate.setHours(snoozeDate.getHours() + 6)
+      
+      try {
+        // snoozeEmail API already sets status to SNOOZED, no need to call updateStatusOnBackend
+        const result = await emailApi.snoozeEmail(emailId, snoozeDate.toISOString())
+        if (result.success) {
+          toast({
+            title: 'Email snoozed',
+            description: 'Email will reappear in 6 hours',
+          })
+          // Refresh the email list to reflect the change
+          if (onRefresh) {
+            onRefresh()
+          }
+        } else {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to snooze email',
+            variant: 'destructive',
+          })
+        }
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to snooze email',
+          variant: 'destructive',
+        })
+      }
+      return
+    }
+
+    // Update status on backend for other columns
     const result = await updateStatusOnBackend(emailId, destinationColumnId)
     
     if (result.success) {
@@ -89,7 +125,7 @@ export default function KanbanBoard({
         variant: 'destructive',
       })
     }
-  }, [updateStatusOnBackend, toast])
+  }, [updateStatusOnBackend, toast, onRefresh])
 
   return (
     <DndContext

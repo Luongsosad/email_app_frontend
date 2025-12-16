@@ -94,6 +94,18 @@ export function useKanbanStatus(userId = null) {
       };
 
       emails.forEach((email) => {
+        // First check if email is actively snoozed
+        if (email.snoozedUntil) {
+          const snoozeDate = new Date(email.snoozedUntil);
+          const now = new Date();
+          if (snoozeDate > now) {
+            // Email is actively snoozed, put in snoozed column
+            columns["snoozed"].push(email);
+            return;
+          }
+        }
+
+        // Otherwise, use the stored kanban status
         const columnId = getEmailStatus(email.id);
         if (columns[columnId]) {
           columns[columnId].push(email);
@@ -148,12 +160,17 @@ export function useKanbanStatus(userId = null) {
             backendStatusMap[status.emailId] = status.status;
           });
 
-          // Merge with existing statuses (backend takes precedence)
+          // Merge with existing statuses (backend takes precedence for these specific emails)
+          // IMPORTANT: Keep statuses for emails NOT in the current batch
           const mergedMap = {
-            ...statusMap,
-            ...backendStatusMap,
+            ...statusMap, // Keep all existing statuses
+            ...backendStatusMap, // Update only the synced emails
           };
+          
           saveStatuses(mergedMap);
+          
+          console.log(`[useKanbanStatus] Synced ${Object.keys(backendStatusMap).length} statuses, total in map: ${Object.keys(mergedMap).length}`);
+          
           return { success: true };
         } else {
           return {

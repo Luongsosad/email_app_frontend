@@ -1,10 +1,11 @@
-import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2 } from 'lucide-react'
+import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2, Clock, Sparkles, Paperclip } from 'lucide-react'
 import { formatDate, formatFileSize } from '@/lib/utils/utils'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ReplyModal from '@/components/dashboard/ReplyModal'
 import ForwardModal from '@/components/dashboard/ForwardModal'
-import { attachmentApi } from '@/lib/api'
+import SnoozeModal from '@/components/dashboard/SnoozeModal'
+import { attachmentApi, emailApi } from '@/lib/api'
 import DOMPurify from 'dompurify'
 
 export default function MailViewer({
@@ -14,14 +15,78 @@ export default function MailViewer({
   onSpam,
   onDelete,
   onArchive,
+  onSnooze,
   loading,
+  onSummaryStart,
+  onSummaryComplete,
 }) {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
   const [showConfirmSpam, setShowConfirmSpam] = useState(false)
   const [showConfirmArchive, setShowConfirmArchive] = useState(false)
   const [showReply, setShowReply] = useState(false)
   const [showForward, setShowForward] = useState(false)
+  const [showSnooze, setShowSnooze] = useState(false)
   const [downloadingAttachments, setDownloadingAttachments] = useState(new Set())
+  const [summary, setSummary] = useState(null)
+  const [loadingSummary, setLoadingSummary] = useState(false)
+
+  // Fetch existing summary when email changes
+  useEffect(() => {
+    const fetchSummary = async () => {
+      if (email?.id) {
+        try {
+          const response = await emailApi.getEmailSummary(email.id)
+          if (response.success && response.data?.summary) {
+            setSummary(response.data.summary)
+          } else {
+            setSummary(null)
+          }
+        } catch (err) {
+          console.error('Failed to fetch summary:', err)
+          setSummary(null)
+        }
+      }
+    }
+    
+    fetchSummary()
+  }, [email?.id])
+
+  const handleGenerateSummary = async () => {
+    if (!email?.id) return
+    
+    setLoadingSummary(true)
+    
+    // Notify parent that summary generation started
+    if (onSummaryStart) {
+      onSummaryStart(email.id, email.subject)
+    }
+    
+    try {
+      // Force regenerate if summary already exists
+      const force = summary !== null
+      const response = await emailApi.summarizeEmail(email.id, force)
+      if (response.success && response.data?.summary) {
+        setSummary(response.data.summary)
+        
+        // Notify parent that summary is complete with the new summary
+        if (onSummaryComplete) {
+          onSummaryComplete(email.id, response.data.summary)
+        }
+        
+        // Trigger a custom event for KanbanCards to refresh
+        window.dispatchEvent(new CustomEvent('emailSummaryUpdated', { 
+          detail: { emailId: email.id, summary: response.data.summary } 
+        }))
+      } else {
+        alert('Failed to generate summary. Please try again.')
+      }
+    } catch (err) {
+      console.error('Failed to generate summary:', err)
+      alert('Failed to generate summary. Please try again.')
+    } finally {
+      setLoadingSummary(false)
+    }
+  }
 
   const handleDeleteConfirm = () => {
     onDelete(email.id)
@@ -107,7 +172,7 @@ export default function MailViewer({
   }, [email.body])
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l border-border">
       {/* Header */}
       <div className="border-b border-border p-4 flex items-center justify-between">
         <button
@@ -144,6 +209,37 @@ export default function MailViewer({
             title="Forward"
           >
             <Forward size={20} />
+          </button>
+
+          <button
+            onClick={() => setShowSnooze(true)}
+            className="p-2 text-muted-foreground hover:text-foreground transition"
+            title="Snooze"
+          >
+            <Clock size={20} />
+          </button>
+
+          <button
+            onClick={handleGenerateSummary}
+            disabled={loadingSummary}
+            className={`p-2 transition ${
+              summary 
+                ? 'text-amber-500 hover:text-amber-600' 
+                : 'text-muted-foreground hover:text-foreground'
+            } ${loadingSummary ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={
+              loadingSummary 
+                ? 'AI đang tạo tóm tắt...' 
+                : summary 
+                  ? 'Tạo lại tóm tắt với AI' 
+                  : 'Tạo tóm tắt với AI'
+            }
+          >
+            {loadingSummary ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Sparkles size={20} />
+            )}
           </button>
 
           <button
@@ -187,7 +283,7 @@ export default function MailViewer({
             <h1 className="text-3xl font-bold mb-4 text-foreground">{email.subject || '(No Subject)'}</h1>
 
             {/* From/To Info */}
-            <div className="bg-muted/30 rounded-lg p-4 mb-6">
+            <div className="bg-muted/30 border border-border rounded-lg p-4 mb-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-lg font-bold text-primary-foreground">
@@ -214,15 +310,60 @@ export default function MailViewer({
 
             {/* To recipients */}
             {email.to && (
-              <div className="mb-6 text-sm">
+              <div className="mb-6 text-sm bg-muted/20 border border-border rounded-lg p-3">
                 <p className="text-muted-foreground">
                   <strong>To:</strong> {Array.isArray(email.to) ? email.to.join(', ') : email.to}
                 </p>
               </div>
             )}
 
+            {/* Summary */}
+            {/* Don't show inline loading if using global notification */}
+            {loadingSummary && !summary && !onSummaryStart && (
+              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <Loader2 size={20} className="text-amber-600 dark:text-amber-400 animate-spin" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2 text-base flex items-center gap-2">
+                      AI đang tạo tóm tắt...
+                      <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
+                        Gemini
+                      </span>
+                    </h3>
+                    <p className="text-amber-700 dark:text-amber-300 leading-relaxed text-sm">
+                      Vui lòng chờ trong giây lát, AI đang phân tích và tóm tắt nội dung email...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {summary && (
+              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <Sparkles size={20} className="text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2 text-base flex items-center gap-2">
+                      AI Summary
+                      <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
+                        Gemini
+                      </span>
+                      {loadingSummary && (
+                        <Loader2 size={14} className="text-amber-600 dark:text-amber-400 animate-spin" />
+                      )}
+                    </h3>
+                    <p className="text-amber-800 dark:text-amber-200 leading-relaxed">{summary}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Body */}
-            <div className="mb-6">
+            <div className="mb-6 border border-border rounded-lg p-4 bg-card">
               <div 
                 className="email-content text-foreground"
                 dangerouslySetInnerHTML={{ __html: sanitizedBody }}
@@ -231,8 +372,11 @@ export default function MailViewer({
 
             {/* Attachments */}
             {email.attachments && email.attachments.length > 0 && (
-              <div className="border-t border-border pt-6">
-                <h3 className="font-semibold mb-3 text-foreground">Attachments ({email.attachments.length})</h3>
+              <div className="border-t-2 border-border pt-6 mt-6">
+                <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+                  <Paperclip size={18} />
+                  Attachments ({email.attachments.length})
+                </h3>
                 <div className="space-y-2">
                   {email.attachments.map(attachment => (
                     <button
@@ -311,6 +455,24 @@ export default function MailViewer({
           email={email}
           onClose={() => setShowForward(false)}
           onSend={() => setShowForward(false)}
+        />
+      )}
+
+      {/* Snooze Modal */}
+      {showSnooze && (
+        <SnoozeModal
+          email={email}
+          onClose={() => setShowSnooze(false)}
+          onSnooze={(emailId, snoozeUntil) => {
+            setShowSnooze(false)
+            if (onSnooze) {
+              onSnooze(emailId, snoozeUntil)
+            }
+            // Close the viewer after snoozing
+            if (onBack) {
+              onBack()
+            }
+          }}
         />
       )}
     </div>

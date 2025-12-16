@@ -1,5 +1,5 @@
-import { apiCall } from './api-helper'
-import { API_ENDPOINTS } from './api-config'
+import { apiCall } from "./api-helper";
+import { API_ENDPOINTS } from "./api-config";
 
 /**
  * Fetch emails by mailbox (folder)
@@ -10,21 +10,29 @@ import { API_ENDPOINTS } from './api-config'
  * @param {string} pageToken - Page token for pagination (optional)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const fetchEmailsByMailbox = async (mailboxId, page = 1, pageSize = 20, search = '', pageToken = '') => {
+export const fetchEmailsByMailbox = async (
+  mailboxId,
+  page = 1,
+  pageSize = 20,
+  search = "",
+  pageToken = ""
+) => {
   try {
-    let endpoint = `${API_ENDPOINTS.EMAILS.LIST(mailboxId)}?page=${page}&pageSize=${pageSize}`
+    let endpoint = `${API_ENDPOINTS.EMAILS.LIST(
+      mailboxId
+    )}?page=${page}&pageSize=${pageSize}`;
     if (search && search.trim()) {
-      endpoint += `&search=${encodeURIComponent(search.trim())}`
+      endpoint += `&search=${encodeURIComponent(search.trim())}`;
     }
     if (pageToken) {
-      endpoint += `&pageToken=${encodeURIComponent(pageToken)}`
+      endpoint += `&pageToken=${encodeURIComponent(pageToken)}`;
     }
-    return await apiCall(endpoint)
+    return await apiCall(endpoint);
   } catch (error) {
-    console.error('Error fetching emails:', error)
-    return { success: false, error: error.message }
+    console.error("Error fetching emails:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Get email detail by ID
@@ -33,12 +41,12 @@ export const fetchEmailsByMailbox = async (mailboxId, page = 1, pageSize = 20, s
  */
 export const fetchEmailDetail = async (emailId) => {
   try {
-    return await apiCall(API_ENDPOINTS.EMAILS.GET(emailId))
+    return await apiCall(API_ENDPOINTS.EMAILS.GET(emailId));
   } catch (error) {
-    console.error('Error fetching email detail:', error)
-    return { success: false, error: error.message }
+    console.error("Error fetching email detail:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Send a new email
@@ -54,14 +62,14 @@ export const fetchEmailDetail = async (emailId) => {
 export const sendEmail = async (emailData) => {
   try {
     return await apiCall(API_ENDPOINTS.EMAILS.SEND, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(emailData),
-    })
+    });
   } catch (error) {
-    console.error('Error sending email:', error)
-    return { success: false, error: error.message }
+    console.error("Error sending email:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Reply to an email
@@ -74,14 +82,14 @@ export const sendEmail = async (emailData) => {
 export const replyToEmail = async (emailId, replyData) => {
   try {
     return await apiCall(`/emails/${emailId}/reply`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(replyData),
-    })
+    });
   } catch (error) {
-    console.error('Error replying to email:', error)
-    return { success: false, error: error.message }
+    console.error("Error replying to email:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Modify email (mark read/unread, star, etc.)
@@ -94,14 +102,14 @@ export const replyToEmail = async (emailId, replyData) => {
 export const modifyEmail = async (emailId, modifyData) => {
   try {
     return await apiCall(`/emails/${emailId}/modify`, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(modifyData),
-    })
+    });
   } catch (error) {
-    console.error('Error modifying email:', error)
-    return { success: false, error: error.message }
+    console.error("Error modifying email:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Delete an email (move to trash or permanently delete)
@@ -112,13 +120,13 @@ export const modifyEmail = async (emailId, modifyData) => {
 export const deleteEmail = async (emailId, permanent = false) => {
   try {
     return await apiCall(`/emails/${emailId}/delete?permanent=${permanent}`, {
-      method: 'POST',
-    })
+      method: "POST",
+    });
   } catch (error) {
-    console.error('Error deleting email:', error)
-    return { success: false, error: error.message }
+    console.error("Error deleting email:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Mark email as read
@@ -128,13 +136,13 @@ export const deleteEmail = async (emailId, permanent = false) => {
 export const markAsRead = async (emailId) => {
   try {
     return await apiCall(`/emails/${emailId}/read`, {
-      method: 'POST',
-    })
+      method: "POST",
+    });
   } catch (error) {
-    console.error('Error marking email as read:', error)
-    return { success: false, error: error.message }
+    console.error("Error marking email as read:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Mark email as unread
@@ -144,13 +152,13 @@ export const markAsRead = async (emailId) => {
 export const markAsUnread = async (emailId) => {
   try {
     return await apiCall(`/emails/${emailId}/unread`, {
-      method: 'POST',
-    })
+      method: "POST",
+    });
   } catch (error) {
-    console.error('Error marking email as unread:', error)
-    return { success: false, error: error.message }
+    console.error("Error marking email as unread:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Star/unstar an email
@@ -160,10 +168,10 @@ export const markAsUnread = async (emailId) => {
  */
 export const toggleStar = async (emailId, starred) => {
   return modifyEmail(emailId, {
-    addLabelIds: starred ? ['STARRED'] : [],
-    removeLabelIds: starred ? [] : ['STARRED'],
-  })
-}
+    addLabelIds: starred ? ["STARRED"] : [],
+    removeLabelIds: starred ? [] : ["STARRED"],
+  });
+};
 
 /**
  * Move email to spam
@@ -172,10 +180,10 @@ export const toggleStar = async (emailId, starred) => {
  */
 export const moveToSpam = async (emailId) => {
   return modifyEmail(emailId, {
-    addLabelIds: ['SPAM'],
-    removeLabelIds: ['INBOX'],
-  })
-}
+    addLabelIds: ["SPAM"],
+    removeLabelIds: ["INBOX"],
+  });
+};
 
 /**
  * Archive an email
@@ -184,9 +192,115 @@ export const moveToSpam = async (emailId) => {
  */
 export const archiveEmail = async (emailId) => {
   return modifyEmail(emailId, {
-    removeLabelIds: ['INBOX'],
-  })
-}
+    removeLabelIds: ["INBOX"],
+  });
+};
+
+/**
+ * Snooze an email until a specific time
+ * @param {string} emailId - The email ID
+ * @param {Date|string} snoozeUntil - ISO 8601 date string or Date object
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const snoozeEmail = async (emailId, snoozeUntil) => {
+  try {
+    console.log(
+      "[snoozeEmail] Snoozing email:",
+      emailId,
+      "until:",
+      snoozeUntil
+    );
+    const snoozeDate =
+      typeof snoozeUntil === "string" ? snoozeUntil : snoozeUntil.toISOString();
+    const result = await apiCall(`/emails/${emailId}/snooze`, {
+      method: "POST",
+      body: JSON.stringify({ snoozeUntil: snoozeDate }),
+    });
+    console.log("[snoozeEmail] Result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error snoozing email:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Unsnooze an email (return to inbox)
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const unsnoozeEmail = async (emailId) => {
+  try {
+    return await apiCall(`/emails/${emailId}/unsnooze`, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Error unsnoozing email:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Get all snoozed emails
+ * @returns {Promise<{success: boolean, data?: {emailIds: string[], total: number}, error?: string}>}
+ */
+export const getSnoozedEmails = async () => {
+  try {
+    console.log("[getSnoozedEmails] Fetching snoozed emails...");
+    const result = await apiCall("/emails/snoozed");
+    console.log("[getSnoozedEmails] Result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error fetching snoozed emails:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Check and restore expired snoozed emails
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const checkExpiredSnoozes = async () => {
+  try {
+    return await apiCall("/emails/check-expired-snoozes", {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Error checking expired snoozes:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Generate or retrieve summary for an email
+ * @param {string} emailId - The email ID
+ * @param {boolean} force - Force regenerate summary even if one exists
+ * @returns {Promise<{success: boolean, data?: {summary: string, summarizedAt: Date, cached: boolean}, error?: string}>}
+ */
+export const summarizeEmail = async (emailId, force = false) => {
+  try {
+    return await apiCall(`/emails/${emailId}/summarize?force=${force}`, {
+      method: "POST",
+    });
+  } catch (error) {
+    console.error("Error summarizing email:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Get existing summary for an email
+ * @param {string} emailId - The email ID
+ * @returns {Promise<{success: boolean, data?: {summary: string, summarizedAt: Date}, error?: string}>}
+ */
+export const getEmailSummary = async (emailId) => {
+  try {
+    return await apiCall(`/emails/${emailId}/summary`);
+  } catch (error) {
+    console.error("Error getting email summary:", error);
+    return { success: false, error: error.message };
+  }
+};
 
 /**
  * Fuzzy search emails (subject, sender, snippet) via backend search endpoint
@@ -197,20 +311,20 @@ export const archiveEmail = async (emailId) => {
  */
 export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
   try {
-    const params = new URLSearchParams()
+    const params = new URLSearchParams();
     if (query && query.trim()) {
-      params.append('q', query.trim())
+      params.append("q", query.trim());
     }
-    params.append('page', String(page))
-    params.append('limit', String(limit))
+    params.append("page", String(page));
+    params.append("limit", String(limit));
 
-    const endpoint = `${API_ENDPOINTS.EMAILS.SEARCH}?${params.toString()}`
-    return await apiCall(endpoint)
+    const endpoint = `${API_ENDPOINTS.EMAILS.SEARCH}?${params.toString()}`;
+    return await apiCall(endpoint);
   } catch (error) {
-    console.error('Error searching emails (fuzzy):', error)
-    return { success: false, error: error.message }
+    console.error("Error searching emails (fuzzy):", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Get email kanban status
@@ -219,12 +333,12 @@ export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
  */
 export const getEmailStatus = async (emailId) => {
   try {
-    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId))
+    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId));
   } catch (error) {
-    console.error('Error fetching email status:', error)
-    return { success: false, error: error.message }
+    console.error("Error fetching email status:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Update email kanban status
@@ -235,14 +349,14 @@ export const getEmailStatus = async (emailId) => {
 export const updateEmailStatus = async (emailId, status) => {
   try {
     return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ status }),
-    })
+    });
   } catch (error) {
-    console.error('Error updating email status:', error)
-    return { success: false, error: error.message }
+    console.error("Error updating email status:", error);
+    return { success: false, error: error.message };
   }
-}
+};
 
 /**
  * Get kanban statuses for multiple emails
@@ -252,11 +366,11 @@ export const updateEmailStatus = async (emailId, status) => {
 export const getBulkEmailStatuses = async (emailIds) => {
   try {
     return await apiCall(API_ENDPOINTS.EMAILS.BULK_STATUS, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify({ emailIds }),
-    })
+    });
   } catch (error) {
-    console.error('Error fetching bulk email statuses:', error)
-    return { success: false, error: error.message }
+    console.error("Error fetching bulk email statuses:", error);
+    return { success: false, error: error.message };
   }
-}
+};
