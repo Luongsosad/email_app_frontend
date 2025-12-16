@@ -7,6 +7,8 @@ export function useEmail() {
   const [loading, setLoading] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [error, setError] = useState(null)
+  const [searchMode, setSearchMode] = useState(false)
+  const [searchError, setSearchError] = useState(null)
   const [pagination, setPagination] = useState({
     page: 1,
     pageSize: 20,
@@ -19,7 +21,9 @@ export function useEmail() {
    */
   const fetchEmails = useCallback(async (mailboxId, page = 1, pageSize = 20, search = '', pageToken = '') => {
     setLoading(true)
+    setSearchMode(false)
     setError(null)
+    setSearchError(null)
     try {
       const response = await emailApi.fetchEmailsByMailbox(mailboxId, page, pageSize, search, pageToken)
       if (response.success && response.data) {
@@ -207,15 +211,66 @@ export function useEmail() {
     }
   }, [])
 
+  /**
+   * Fuzzy search emails using backend search endpoint
+   */
+  const searchEmailsFuzzy = useCallback(async (query, page = 1, pageSize = 20) => {
+    setLoading(true)
+    setSearchMode(true)
+    setSearchError(null)
+    setError(null)
+
+    try {
+      const response = await emailApi.searchEmailsFuzzy(query, page, pageSize)
+      if (response.success && response.data) {
+        setEmails(response.data.emails || [])
+        setPagination({
+          page: response.data.page || page,
+          pageSize: response.data.pageSize || pageSize,
+          total: response.data.total || 0,
+          nextPageToken: null,
+        })
+        return { success: true, data: response.data }
+      }
+
+      const message = response.error || 'Failed to search emails'
+      setSearchError(message)
+      return { success: false, error: message }
+    } catch (err) {
+      const message = err?.message || 'Error searching emails'
+      setSearchError(message)
+      return { success: false, error: message }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  /**
+   * Clear search mode and optionally reload mailbox emails
+   */
+  const clearSearch = useCallback(async (mailboxId, page = 1, pageSize = 20) => {
+    setSearchMode(false)
+    setSearchError(null)
+
+    if (mailboxId) {
+      // Reload current mailbox with no search query
+      await fetchEmails(mailboxId, page, pageSize, '', '')
+    }
+  }, [fetchEmails])
+
   return {
     emails,
     emailDetail,
     loading,
     loadingDetail,
     error,
+    searchMode,
+    searchError,
     pagination,
     fetchEmails,
     fetchEmailDetail,
+    searchEmailsFuzzy,
+    clearSearch,
     sendEmail,
     replyToEmail,
     toggleStar,

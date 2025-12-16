@@ -7,6 +7,7 @@ import KanbanBoard from './KanbanBoard'
 import ComposeModal from './ComposeModal'
 import SettingsPage from './SettingsPage'
 import SearchBar from './SearchBar'
+import SearchResultsView from './SearchResultsView'
 import { Button } from '../ui/button'
 import { useEmail } from '../../hooks/use-email'
 import { useMailbox } from '../../hooks/use-mailbox'
@@ -23,6 +24,7 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
+  const [isSearchMode, setIsSearchMode] = useState(false)
   
   // View mode state: 'traditional' | 'kanban'
   const [viewMode, setViewMode] = useState(() => {
@@ -46,6 +48,9 @@ export default function DashboardPage({ user, onLogout }) {
     pagination,
     fetchEmails,
     fetchEmailDetail,
+    searchMode,
+    searchEmailsFuzzy,
+    clearSearch,
     toggleStar,
     markAsRead,
     markAsUnread,
@@ -98,18 +103,52 @@ export default function DashboardPage({ user, onLogout }) {
     setSelectedEmail(null)
     setSearchQuery('')
     setCurrentPageToken('')
+    setIsSearchMode(false)
   }, [])
 
   const handleSearch = useCallback((query) => {
     setSearchQuery(query)
     setCurrentPageToken('')
-    fetchEmails(selectedFolder, 1, 20, query, '')
-  }, [selectedFolder, fetchEmails])
+
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setIsSearchMode(false)
+      // Back to normal mailbox view
+      fetchEmails(selectedFolder, 1, 20, '', '')
+      return
+    }
+
+    // Enter search mode and force list view for clearer results
+    setIsSearchMode(true)
+    if (viewMode === 'kanban') {
+      setViewMode('traditional')
+      try {
+        localStorage.setItem(VIEW_MODE_STORAGE_KEY, 'traditional')
+      } catch (error) {
+        console.error('Failed to save view mode preference:', error)
+      }
+    }
+
+    searchEmailsFuzzy(trimmed, 1, 20)
+  }, [selectedFolder, fetchEmails, searchEmailsFuzzy, viewMode])
 
   const handlePageChange = useCallback((page, pageToken = '') => {
+    // In search mode, use fuzzy search pagination (no Gmail pageToken)
+    if (isSearchMode) {
+      searchEmailsFuzzy(searchQuery, page, 20)
+      return
+    }
+
     setCurrentPageToken(pageToken)
     fetchEmails(selectedFolder, page, 20, searchQuery, pageToken)
-  }, [selectedFolder, searchQuery, fetchEmails])
+  }, [isSearchMode, searchQuery, selectedFolder, fetchEmails, searchEmailsFuzzy])
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('')
+    setIsSearchMode(false)
+    setCurrentPageToken('')
+    clearSearch(selectedFolder, 1, 20)
+  }, [clearSearch, selectedFolder])
 
   const handleSelectEmail = useCallback(async (email) => {
     setSelectedEmail(email)
@@ -255,6 +294,10 @@ export default function DashboardPage({ user, onLogout }) {
   }, [selectedFolder, fetchEmails, toast])
 
   const handleToggleViewMode = useCallback(() => {
+    // When in search mode, keep list view to avoid confusing UX
+    if (isSearchMode) {
+      return
+    }
     const newMode = viewMode === 'traditional' ? 'kanban' : 'traditional'
     setViewMode(newMode)
     try {
@@ -314,7 +357,7 @@ export default function DashboardPage({ user, onLogout }) {
                 </>
               )}
             </Button>
-            
+
             {/* Search Bar */}
             <div className="flex-1 min-w-0">
               <SearchBar
@@ -322,13 +365,25 @@ export default function DashboardPage({ user, onLogout }) {
                 pagination={pagination}
                 onPageChange={handlePageChange}
                 loading={emailLoading}
+                initialQuery={searchQuery}
               />
             </div>
+
+            {isSearchMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearSearch}
+                className="flex-shrink-0"
+              >
+                Clear search
+              </Button>
+            )}
           </div>
         </div>
         
         {/* Mail content area */}
-        {viewMode === 'kanban' ? (
+        {viewMode === 'kanban' && !isSearchMode ? (
           <div className="flex-1 flex overflow-hidden">
             <KanbanBoard
               emails={emails}
@@ -338,6 +393,32 @@ export default function DashboardPage({ user, onLogout }) {
               user={user}
             />
             
+            {selectedEmail && (
+              <MailViewer
+                email={emailDetail || selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onStar={handleStarEmail}
+                onSpam={handleMoveToSpam}
+                onDelete={handleDelete}
+                onArchive={handleArchive}
+                loading={emailDetailLoading}
+              />
+            )}
+          </div>
+        ) : isSearchMode ? (
+          <div className="flex-1 flex overflow-hidden">
+            <SearchResultsView
+              emails={emails}
+              loading={emailLoading}
+              error={emailError}
+              searchQuery={searchQuery}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+              selectedEmail={selectedEmail}
+              onSelectEmail={handleSelectEmail}
+              onBack={handleClearSearch}
+            />
+
             {selectedEmail && (
               <MailViewer
                 email={emailDetail || selectedEmail}

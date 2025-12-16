@@ -2,14 +2,20 @@ import { memo } from 'react'
 import { Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
-function SearchBar({ 
-  onSearch, 
-  pagination, 
-  onPageChange, 
-  loading 
+function SearchBar({
+  onSearch,
+  pagination,
+  onPageChange,
+  loading,
+  initialQuery = '',
 }) {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(initialQuery || '')
   const [searchTimeout, setSearchTimeout] = useState(null)
+
+  // Sync internal state when initialQuery changes (e.g., clear search from parent)
+  useEffect(() => {
+    setSearchQuery(initialQuery || '')
+  }, [initialQuery])
 
   // Debounce search
   useEffect(() => {

@@ -189,6 +189,30 @@ export const archiveEmail = async (emailId) => {
 }
 
 /**
+ * Fuzzy search emails (subject, sender, snippet) via backend search endpoint
+ * @param {string} query - Search query (supports typos and partial matches)
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Number of emails per page (default: 20)
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
+  try {
+    const params = new URLSearchParams()
+    if (query && query.trim()) {
+      params.append('q', query.trim())
+    }
+    params.append('page', String(page))
+    params.append('limit', String(limit))
+
+    const endpoint = `${API_ENDPOINTS.EMAILS.SEARCH}?${params.toString()}`
+    return await apiCall(endpoint)
+  } catch (error) {
+    console.error('Error searching emails (fuzzy):', error)
+    return { success: false, error: error.message }
+  }
+}
+
+/**
  * Get email kanban status
  * @param {string} emailId - The email ID
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}

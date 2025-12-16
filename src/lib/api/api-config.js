@@ -26,6 +26,7 @@ export const API_ENDPOINTS = {
     LIST: (mailboxId) => `/mailboxes/${mailboxId}/emails`,
     GET: (id) => `/emails/${id}`,
     SEND: '/emails/send',
+    SEARCH: '/mailboxes/search',
     UPDATE: (id) => `/emails/${id}`,
     DELETE: (id) => `/emails/${id}`,
     STATUS: (id) => `/emails/${id}/status`,
