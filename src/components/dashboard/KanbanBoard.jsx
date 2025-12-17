@@ -3,7 +3,9 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Loader2 } from 'lucide-react'
 import KanbanColumn from './KanbanColumn'
+import KanbanToolbar from './KanbanToolbar'
 import { useKanbanStatus } from '../../hooks/use-kanban-status'
+import { useKanbanFilters } from '../../hooks/use-kanban-filters'
 import { useToast } from '../../hooks/use-toast'
 import { emailApi } from '../../lib/api'
 
@@ -31,6 +33,17 @@ export default function KanbanBoard({
   // Use kanban status hook to organize emails
   const { getEmailsByColumn, isLoaded, isSyncing, updateStatusOnBackend } = useKanbanStatus(userId)
 
+  // Use kanban filters hook for sorting and filtering
+  const {
+    sortBy,
+    filters,
+    hasActiveFilters,
+    updateSort,
+    updateFilter,
+    clearFilters,
+    procesEmails,
+  } = useKanbanFilters()
+
   // Configure sensors for drag-and-drop
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -39,7 +52,7 @@ export default function KanbanBoard({
     })
   )
 
-  // Organize emails into columns
+  // Organize emails into columns with sorting and filtering applied
   const emailsByColumn = useMemo(() => {
     if (!isLoaded) {
       return {
@@ -50,8 +63,18 @@ export default function KanbanBoard({
         'snoozed': [],
       }
     }
-    return getEmailsByColumn(emails)
-  }, [emails, getEmailsByColumn, isLoaded])
+    
+    // First organize emails by column
+    const organizedByColumn = getEmailsByColumn(emails)
+    
+    // Then apply sorting and filtering to each column
+    const processedByColumn = {}
+    Object.keys(organizedByColumn).forEach(columnId => {
+      processedByColumn[columnId] = procesEmails(organizedByColumn[columnId])
+    })
+    
+    return processedByColumn
+  }, [emails, getEmailsByColumn, isLoaded, procesEmails, sortBy, filters])
 
   // Handle drag end event
   const handleDragEnd = useCallback(async (event) => {
@@ -145,6 +168,16 @@ export default function KanbanBoard({
             </div>
           </div>
         )}
+
+        {/* Sorting and Filtering Toolbar */}
+        <KanbanToolbar
+          sortBy={sortBy}
+          onSortChange={updateSort}
+          filters={filters}
+          onFilterChange={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+        />
 
         {/* Kanban Board Container */}
         <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
