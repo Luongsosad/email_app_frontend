@@ -91,6 +91,11 @@ export default function DashboardPage({ user, onLogout }) {
     const fetchAllEmails = async () => {
       if (!selectedFolder) return
       
+      // Skip fetching if we're in search mode - search results should persist
+      if (isSearchMode) {
+        return
+      }
+      
       setSearchQuery('')
       setCurrentPageToken('')
       
@@ -126,7 +131,7 @@ export default function DashboardPage({ user, onLogout }) {
     }
     
     fetchAllEmails()
-  }, [selectedFolder, viewMode]) // Removed fetchEmails from deps to avoid infinite loop
+  }, [selectedFolder, viewMode, isSearchMode]) // Added isSearchMode to deps
 
   // Sync kanban statuses with backend when emails are loaded
   useEffect(() => {
@@ -232,6 +237,7 @@ export default function DashboardPage({ user, onLogout }) {
 
     // Enter search mode and force list view for clearer results
     setIsSearchMode(true)
+    // If currently in kanban view, switch to list view when searching
     if (viewMode === 'kanban') {
       setViewMode('traditional')
       try {
@@ -444,18 +450,20 @@ export default function DashboardPage({ user, onLogout }) {
   }, [selectedFolder, fetchEmails, toast])
 
   const handleToggleViewMode = useCallback(() => {
-    // When in search mode, keep list view to avoid confusing UX
-    if (isSearchMode) {
-      return
-    }
     const newMode = viewMode === 'traditional' ? 'kanban' : 'traditional'
+    
+    // If switching to kanban while in search mode, clear search first
+    if (newMode === 'kanban' && isSearchMode) {
+      handleClearSearch()
+    }
+    
     setViewMode(newMode)
     try {
       localStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode)
     } catch (error) {
       console.error('Failed to save view mode preference:', error)
     }
-  }, [viewMode])
+  }, [viewMode, isSearchMode, handleClearSearch])
 
   // Summary notification handlers
   const handleSummaryStart = useCallback((emailId, emailSubject) => {
