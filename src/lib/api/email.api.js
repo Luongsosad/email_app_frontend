@@ -327,6 +327,42 @@ export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
 };
 
 /**
+ * Semantic search emails using vector embeddings
+ * @param {string} query - Search query text
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Number of emails per page (default: 20)
+ * @param {Object} filters - Optional filters
+ * @param {boolean} filters.unreadOnly - Filter unread emails only
+ * @param {string} filters.sender - Filter by sender email or name
+ * @param {string} filters.status - Filter by email status (inbox, todo, in-progress, done, snoozed)
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const searchEmailsSemantic = async (query, page = 1, limit = 20, filters = {}) => {
+  try {
+    if (!query || !query.trim()) {
+      return { success: false, error: 'Query is required' };
+    }
+
+    const requestBody = {
+      query: query.trim(),
+      page,
+      limit,
+      ...(filters.unreadOnly !== undefined && { unreadOnly: filters.unreadOnly }),
+      ...(filters.sender && { sender: filters.sender }),
+      ...(filters.status && { status: filters.status }),
+    };
+
+    return await apiCall(API_ENDPOINTS.SEARCH.SEMANTIC, {
+      method: 'POST',
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    console.error("Error searching emails (semantic):", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Get email kanban status
  * @param {string} emailId - The email ID
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}

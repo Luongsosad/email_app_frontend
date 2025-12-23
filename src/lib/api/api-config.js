@@ -32,6 +32,10 @@ export const API_ENDPOINTS = {
     STATUS: (id) => `/emails/${id}/status`,
     BULK_STATUS: '/emails/bulk-status',
   },
+  // Search endpoints
+  SEARCH: {
+    SEMANTIC: '/search/semantic',
+  },
 }
 
 // HTTP headers

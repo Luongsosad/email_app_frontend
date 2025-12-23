@@ -59,6 +59,7 @@ export default function DashboardPage({ user, onLogout }) {
     fetchEmailDetail,
     searchMode,
     searchEmailsFuzzy,
+    searchEmailsSemantic,
     clearSearch,
     toggleStar,
     markAsRead,
@@ -247,19 +248,58 @@ export default function DashboardPage({ user, onLogout }) {
       }
     }
 
+    // Use fuzzy search as fallback
     searchEmailsFuzzy(trimmed, 1, 20)
   }, [selectedFolder, fetchEmails, searchEmailsFuzzy, viewMode])
 
+  const handleSemanticSearch = useCallback((query) => {
+    setSearchQuery(query)
+    setCurrentPageToken('')
+
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setIsSearchMode(false)
+      // Back to normal mailbox view
+      fetchEmails(selectedFolder, 1, 20, '', '')
+      return
+    }
+
+    // Enter search mode and force list view for clearer results
+    setIsSearchMode(true)
+    // If currently in kanban view, switch to list view when searching
+    if (viewMode === 'kanban') {
+      setViewMode('traditional')
+      try {
+        localStorage.setItem(VIEW_MODE_STORAGE_KEY, 'traditional')
+      } catch (error) {
+        console.error('Failed to save view mode preference:', error)
+      }
+    }
+
+    // Use semantic search
+    if (searchEmailsSemantic) {
+      searchEmailsSemantic(trimmed, 1, 20)
+    } else {
+      // Fallback to fuzzy search if semantic not available
+      searchEmailsFuzzy(trimmed, 1, 20)
+    }
+  }, [selectedFolder, fetchEmails, searchEmailsSemantic, searchEmailsFuzzy, viewMode])
+
   const handlePageChange = useCallback((page, pageToken = '') => {
-    // In search mode, use fuzzy search pagination (no Gmail pageToken)
+    // In search mode, use semantic search pagination (no Gmail pageToken)
     if (isSearchMode) {
-      searchEmailsFuzzy(searchQuery, page, 20)
+      // Try semantic search first, fallback to fuzzy if needed
+      if (searchEmailsSemantic) {
+        searchEmailsSemantic(searchQuery, page, 20)
+      } else {
+        searchEmailsFuzzy(searchQuery, page, 20)
+      }
       return
     }
 
     setCurrentPageToken(pageToken)
     fetchEmails(selectedFolder, page, 20, searchQuery, pageToken)
-  }, [isSearchMode, searchQuery, selectedFolder, fetchEmails, searchEmailsFuzzy])
+  }, [isSearchMode, searchQuery, selectedFolder, fetchEmails, searchEmailsFuzzy, searchEmailsSemantic])
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('')
@@ -624,10 +664,12 @@ export default function DashboardPage({ user, onLogout }) {
             <div className="flex-1 min-w-0">
               <SearchBar
                 onSearch={handleSearch}
+                onSemanticSearch={handleSemanticSearch}
                 pagination={pagination}
                 onPageChange={handlePageChange}
                 loading={emailLoading}
                 initialQuery={searchQuery}
+                emails={emails}
               />
             </div>
 

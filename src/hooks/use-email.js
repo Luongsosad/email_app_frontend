@@ -271,6 +271,71 @@ export function useEmail() {
   }, [])
 
   /**
+   * Semantic search emails using vector embeddings
+   * Falls back to fuzzy search if semantic search returns empty results
+   */
+  const searchEmailsSemantic = useCallback(async (query, page = 1, pageSize = 20, filters = {}) => {
+    setLoading(true)
+    setSearchMode(true)
+    setSearchError(null)
+    setError(null)
+
+    try {
+      const response = await emailApi.searchEmailsSemantic(query, page, pageSize, filters)
+      if (response.success && response.data) {
+        // Check if semantic search returned empty results
+        const total = response.data.total || 0
+        const items = response.data.items || []
+        
+        // If semantic search returns empty, fallback to fuzzy search
+        if (total === 0 || items.length === 0) {
+          console.log('[use-email] Semantic search returned empty, falling back to fuzzy search')
+          return await searchEmailsFuzzy(query, page, pageSize)
+        }
+        
+        // Transform backend response to frontend format
+        const transformedEmails = items.map(item => ({
+          id: item.id,
+          senderName: item.senderName || '',
+          subject: item.subject || '',
+          preview: item.snippet || '',
+          timestamp: item.receivedAt ? new Date(item.receivedAt) : new Date(),
+          isStarred: false, // Default value, can be enhanced later
+          isRead: item.status !== 'inbox', // Simple heuristic: inbox = unread
+          snoozedUntil: null,
+          // Store semantic score for potential display
+          semanticScore: item.score || 0,
+        }))
+
+        setEmails(transformedEmails)
+        setPagination({
+          page: response.data.page || page,
+          pageSize: response.data.limit || pageSize,
+          total: response.data.total || 0,
+          nextPageToken: null, // Semantic search doesn't use Gmail pageToken
+        })
+        return { success: true, data: { emails: transformedEmails, total: response.data.total, page: response.data.page, pageSize: response.data.limit } }
+      }
+
+      // If semantic search failed, fallback to fuzzy search
+      console.log('[use-email] Semantic search failed, falling back to fuzzy search')
+      return await searchEmailsFuzzy(query, page, pageSize)
+    } catch (err) {
+      // If error occurs, try fuzzy search as fallback
+      console.log('[use-email] Semantic search error, falling back to fuzzy search:', err.message)
+      try {
+        return await searchEmailsFuzzy(query, page, pageSize)
+      } catch (fuzzyErr) {
+        const message = err?.message || 'Error searching emails'
+        setSearchError(message)
+        return { success: false, error: message }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [searchEmailsFuzzy])
+
+  /**
    * Clear search mode and optionally reload mailbox emails
    */
   const clearSearch = useCallback(async (mailboxId, page = 1, pageSize = 20) => {
@@ -295,6 +360,7 @@ export function useEmail() {
     fetchEmails,
     fetchEmailDetail,
     searchEmailsFuzzy,
+    searchEmailsSemantic,
     clearSearch,
     sendEmail,
     replyToEmail,
