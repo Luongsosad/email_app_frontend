@@ -19,8 +19,8 @@ export function useKanbanColumns(userId = null) {
   const [columns, setColumns] = useState(DEFAULT_COLUMNS)
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load columns from localStorage
-  useEffect(() => {
+  // Function to load columns from localStorage
+  const loadColumns = useCallback(() => {
     try {
       const key = getStorageKey(userId)
       const stored = localStorage.getItem(key)
@@ -55,6 +55,35 @@ export function useKanbanColumns(userId = null) {
     }
   }, [userId])
 
+  // Load columns from localStorage on mount and when userId changes
+  useEffect(() => {
+    loadColumns()
+  }, [loadColumns])
+
+  // Listen for storage changes to reload columns
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      const key = getStorageKey(userId)
+      if (e.key === key || (e.key === null && e.newValue === null)) {
+        // Reload columns when storage changes
+        loadColumns()
+      }
+    }
+
+    const handleCustomEvent = () => {
+      // Reload columns when custom event is triggered
+      loadColumns()
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('kanbanColumnsUpdated', handleCustomEvent)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('kanbanColumnsUpdated', handleCustomEvent)
+    }
+  }, [userId, loadColumns])
+
   // Save to localStorage
   const saveColumns = useCallback(
     (nextColumns) => {
@@ -62,6 +91,8 @@ export function useKanbanColumns(userId = null) {
         const key = getStorageKey(userId)
         setColumns(nextColumns)
         localStorage.setItem(key, JSON.stringify(nextColumns))
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event('kanbanColumnsUpdated'))
       } catch (error) {
         console.error('Failed to save kanban columns:', error)
       }

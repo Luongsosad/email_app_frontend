@@ -380,14 +380,33 @@ export const getEmailStatus = async (emailId) => {
  * Update email kanban status
  * @param {string} emailId - The email ID
  * @param {string} status - The kanban status ('inbox' | 'todo' | 'in-progress' | 'done' | 'snoozed')
+ * @param {string|null} gmailLabelId - Gmail label ID to sync (optional)
+ * @param {string|null} oldGmailLabelId - Previous Gmail label ID to remove (optional)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const updateEmailStatus = async (emailId, status) => {
+export const updateEmailStatus = async (emailId, status, gmailLabelId = null, oldGmailLabelId = null) => {
   try {
-    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
-      method: "PUT",
-      body: JSON.stringify({ status }),
+    const body = { status };
+    if (gmailLabelId) {
+      body.gmailLabelId = gmailLabelId;
+    }
+    if (oldGmailLabelId) {
+      body.oldGmailLabelId = oldGmailLabelId;
+    }
+    console.log(`[updateEmailStatus] Calling API:`, {
+      endpoint: API_ENDPOINTS.EMAILS.STATUS(emailId),
+      method: 'PUT',
+      body
     });
+    const result = await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
+      method: "PUT",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    console.log(`[updateEmailStatus] API result:`, result);
+    return result;
   } catch (error) {
     console.error("Error updating email status:", error);
     return { success: false, error: error.message };

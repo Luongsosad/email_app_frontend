@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { GripVertical, Trash2, Plus, Save } from 'lucide-react'
+import { GripVertical, Trash2, Plus } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { useKanbanColumns } from '../../hooks/use-kanban-columns'
@@ -65,8 +65,7 @@ export default function KanbanSettings({ user }) {
   }
 
   // All changes are persisted immediately via useKanbanColumns.
-  // The Save button is kept for UX feedback (no-op for now).
-  const handleSave = () => {}
+  // No need for Save button since changes are auto-saved.
 
   return (
     <div className="p-6 border-t border-border space-y-4">
@@ -139,7 +138,7 @@ export default function KanbanSettings({ user }) {
         ))}
       </div>
 
-      <div className="flex items-center justify-between pt-2 gap-2">
+      <div className="flex items-center justify-end pt-2 gap-2">
         <Button
           type="button"
           variant="outline"
@@ -149,16 +148,11 @@ export default function KanbanSettings({ user }) {
           <Plus className="w-4 h-4 mr-1" />
           Add Column
         </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSave}
-        >
-          <Save className="w-4 h-4 mr-1" />
-          Save Changes
-        </Button>
       </div>
+      
+      <p className="text-xs text-muted-foreground mt-2">
+        Changes are saved automatically
+      </p>
     </div>
   )
 }

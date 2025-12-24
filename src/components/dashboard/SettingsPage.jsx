@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { X, Bell, Moon, Lock, Ligature as Signature } from 'lucide-react'
+import { X, Bell, Moon, Lock, Ligature as Signature, LayoutGrid } from 'lucide-react'
+import KanbanSettings from './KanbanSettings'
 
 export default function SettingsPage({ user, onClose }) {
   const [settings, setSettings] = useState({
@@ -172,6 +173,14 @@ export default function SettingsPage({ user, onClose }) {
                 <span className="text-sm font-medium text-foreground">Auto-read emails</span>
               </label>
             </div>
+          </div>
+
+          {/* Kanban Board Section */}
+          <div className="p-6 border-b border-border">
+            <h3 className="text-lg font-semibold mb-4 text-foreground flex items-center gap-2">
+              <LayoutGrid size={20} /> Kanban Board
+            </h3>
+            <KanbanSettings user={user} />
           </div>
 
           {/* Email Signature Section */}

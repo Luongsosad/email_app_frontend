@@ -135,14 +135,22 @@ export default function DashboardPage({ user, onLogout }) {
   }, [selectedFolder, viewMode, isSearchMode]) // Added isSearchMode to deps
 
   // Sync kanban statuses with backend when emails are loaded
+  // Use emailIds string to prevent unnecessary re-syncs
+  const emailIdsString = useMemo(() => {
+    if (emails.length === 0 || viewMode !== 'kanban') return ''
+    return emails.map(email => email.id).sort().join(',')
+  }, [emails, viewMode])
+
   useEffect(() => {
-    if (emails.length > 0 && viewMode === 'kanban') {
-      const emailIds = emails.map(email => email.id)
-      syncWithBackend(emailIds).catch((error) => {
-        console.error('Failed to sync kanban statuses:', error)
-      })
+    if (emailIdsString && viewMode === 'kanban') {
+      const emailIds = emailIdsString.split(',').filter(id => id)
+      if (emailIds.length > 0) {
+        syncWithBackend(emailIds).catch((error) => {
+          console.error('Failed to sync kanban statuses:', error)
+        })
+      }
     }
-  }, [emails, viewMode, syncWithBackend])
+  }, [emailIdsString, viewMode, syncWithBackend])
 
   // Check for expired snoozes periodically (every 30 seconds)
   useEffect(() => {

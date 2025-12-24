@@ -81,17 +81,42 @@ export function useKanbanStatus(userId = null) {
   /**
    * Organize emails array into columns
    * @param {Array} emails - Array of email objects
+   * @param {Array} availableColumns - Array of available column configs (optional, for custom columns)
    * @returns {Object} Object with column IDs as keys and email arrays as values
    */
   const getEmailsByColumn = useCallback(
-    (emails) => {
-      const columns = {
-        inbox: [],
-        todo: [],
-        "in-progress": [],
-        done: [],
-        snoozed: [],
-      };
+    (emails, availableColumns = null) => {
+      console.log(
+        `[getEmailsByColumn] Called with ${emails.length} emails, statusMap keys:`,
+        Object.keys(statusMap)
+      );
+
+      // Initialize columns object with all available columns
+      const columns = {};
+
+      // If availableColumns provided, use them; otherwise use default columns
+      if (availableColumns && Array.isArray(availableColumns)) {
+        availableColumns.forEach((col) => {
+          columns[col.id] = [];
+        });
+      } else {
+        // Default columns for backward compatibility
+        columns.inbox = [];
+        columns.todo = [];
+        columns["in-progress"] = [];
+        columns.done = [];
+        columns.snoozed = [];
+      }
+
+      console.log(`[getEmailsByColumn] Processing ${emails.length} emails`);
+      console.log(
+        `[getEmailsByColumn] Email IDs in emails array:`,
+        emails.map((e) => e.id)
+      );
+      console.log(
+        `[getEmailsByColumn] StatusMap keys:`,
+        Object.keys(statusMap)
+      );
 
       emails.forEach((email) => {
         // First check if email is actively snoozed
@@ -100,24 +125,74 @@ export function useKanbanStatus(userId = null) {
           const now = new Date();
           if (snoozeDate > now) {
             // Email is actively snoozed, put in snoozed column
-            columns["snoozed"].push(email);
+            if (columns["snoozed"]) {
+              columns["snoozed"].push(email);
+            } else if (columns.snoozed) {
+              columns.snoozed.push(email);
+            } else {
+              // If snoozed column doesn't exist, default to inbox
+              if (columns.inbox) {
+                columns.inbox.push(email);
+              }
+            }
             return;
           }
         }
 
         // Otherwise, use the stored kanban status
-        const columnId = getEmailStatus(email.id);
+        // Read directly from statusMap to get the latest value (not from closure)
+        const columnId = statusMap[email.id] || "inbox";
+        const hasStatus = email.id in statusMap;
+        console.log(
+          `[getEmailsByColumn] Email ${
+            email.id
+          }: hasStatus=${hasStatus}, statusMap[${email.id}]=${
+            statusMap[email.id]
+          }, columnId=${columnId}, available columns:`,
+          Object.keys(columns)
+        );
+
         if (columns[columnId]) {
           columns[columnId].push(email);
+          console.log(
+            `[getEmailsByColumn] ✓ Added email ${email.id} to column ${columnId} (${columns[columnId].length} emails in column now)`
+          );
         } else {
+          // Column doesn't exist - this shouldn't happen but handle gracefully
+          console.warn(
+            `[getEmailsByColumn] ✗ Column ${columnId} not found for email ${email.id}, available columns:`,
+            Object.keys(columns)
+          );
           // Default to inbox if column doesn't exist
-          columns["inbox"].push(email);
+          if (columns.inbox) {
+            columns.inbox.push(email);
+            console.log(
+              `[getEmailsByColumn] Fallback: Added email ${email.id} to inbox`
+            );
+          } else if (availableColumns && availableColumns.length > 0) {
+            // If no inbox, use first available column
+            columns[availableColumns[0].id].push(email);
+            console.log(
+              `[getEmailsByColumn] Fallback: Added email ${email.id} to first column ${availableColumns[0].id}`
+            );
+          } else {
+            console.error(
+              `[getEmailsByColumn] ✗✗✗ Email ${email.id} LOST - no valid column found!`
+            );
+          }
         }
       });
 
+      // Log final result
+      const resultSummary = Object.keys(columns).map((colId) => ({
+        colId,
+        count: columns[colId].length,
+      }));
+      console.log(`[getEmailsByColumn] Final result:`, resultSummary);
+
       return columns;
     },
-    [getEmailStatus]
+    [statusMap] // Depend on statusMap directly, not getEmailStatus
   );
 
   /**
@@ -162,15 +237,30 @@ export function useKanbanStatus(userId = null) {
 
           // Merge with existing statuses (backend takes precedence for these specific emails)
           // IMPORTANT: Keep statuses for emails NOT in the current batch
-          const mergedMap = {
-            ...statusMap, // Keep all existing statuses
-            ...backendStatusMap, // Update only the synced emails
-          };
-          
-          saveStatuses(mergedMap);
-          
-          console.log(`[useKanbanStatus] Synced ${Object.keys(backendStatusMap).length} statuses, total in map: ${Object.keys(mergedMap).length}`);
-          
+          // Use functional update to get latest statusMap
+          setStatusMap((currentStatusMap) => {
+            const mergedMap = {
+              ...currentStatusMap, // Keep all existing statuses
+              ...backendStatusMap, // Update only the synced emails
+            };
+
+            // Save to localStorage
+            try {
+              const key = getStorageKey();
+              localStorage.setItem(key, JSON.stringify(mergedMap));
+            } catch (error) {
+              console.error("Failed to save synced statuses:", error);
+            }
+
+            return mergedMap;
+          });
+
+          console.log(
+            `[useKanbanStatus] Synced ${
+              Object.keys(backendStatusMap).length
+            } statuses`
+          );
+
           return { success: true };
         } else {
           return {
@@ -185,7 +275,7 @@ export function useKanbanStatus(userId = null) {
         setIsSyncing(false);
       }
     },
-    [statusMap, saveStatuses]
+    [getStorageKey] // Remove statusMap and saveStatuses from dependencies
   );
 
   /**
@@ -193,46 +283,83 @@ export function useKanbanStatus(userId = null) {
    * Implements optimistic update pattern
    * @param {string} emailId - The email ID
    * @param {string} columnId - The column ID
+   * @param {string|null} gmailLabelId - Gmail label ID to sync (optional)
+   * @param {string|null} oldGmailLabelId - Previous Gmail label ID to remove (optional)
    * @returns {Promise<{success: boolean, error?: string}>}
    */
   const updateStatusOnBackend = useCallback(
-    async (emailId, columnId) => {
+    async (emailId, columnId, gmailLabelId = null, oldGmailLabelId = null) => {
       // Optimistic update: update UI immediately
-      const previousStatus = statusMap[emailId] || "inbox";
-      const optimisticMap = {
-        ...statusMap,
-        [emailId]: columnId,
-      };
-      setStatusMap(optimisticMap);
+      // Use functional update to ensure we get the latest statusMap
+      setStatusMap((currentStatusMap) => {
+        const previousStatus = currentStatusMap[emailId] || "inbox";
+        const optimisticMap = {
+          ...currentStatusMap,
+          [emailId]: columnId,
+        };
 
-      // Try to save optimistically to localStorage
-      try {
-        const key = getStorageKey();
-        localStorage.setItem(key, JSON.stringify(optimisticMap));
-      } catch (error) {
-        console.error("Failed to save optimistic update:", error);
-      }
+        console.log(
+          `[updateStatusOnBackend] Optimistic update: email ${emailId} from ${previousStatus} to ${columnId}`
+        );
+        console.log(
+          `[updateStatusOnBackend] New statusMap keys:`,
+          Object.keys(optimisticMap)
+        );
 
-      try {
-        const response = await updateEmailStatus(emailId, columnId);
-        if (response.success) {
-          // Backend update successful, ensure localStorage is synced
+        // Save to localStorage immediately
+        try {
           const key = getStorageKey();
           localStorage.setItem(key, JSON.stringify(optimisticMap));
+        } catch (error) {
+          console.error("Failed to save optimistic update:", error);
+        }
+
+        return optimisticMap;
+      });
+
+      // Get previous status for error handling
+      const previousStatus = statusMap[emailId] || "inbox";
+
+      try {
+        console.log(
+          `[updateStatusOnBackend] Calling API: email ${emailId} from ${previousStatus} to ${columnId}`,
+          {
+            gmailLabelId,
+            oldGmailLabelId,
+          }
+        );
+        const response = await updateEmailStatus(
+          emailId,
+          columnId,
+          gmailLabelId,
+          oldGmailLabelId
+        );
+        console.log(`[updateStatusOnBackend] API response:`, response);
+        if (response.success) {
+          // Backend update successful - statusMap already updated optimistically
+          console.log(
+            `[updateStatusOnBackend] Successfully updated email ${emailId} to ${columnId}`
+          );
           return { success: true };
         } else {
           // Backend update failed, revert optimistic update
-          const revertedMap = {
-            ...optimisticMap,
-            [emailId]: previousStatus,
-          };
-          setStatusMap(revertedMap);
-          try {
-            const key = getStorageKey();
-            localStorage.setItem(key, JSON.stringify(revertedMap));
-          } catch (error) {
-            console.error("Failed to revert status:", error);
-          }
+          console.error(
+            `[updateStatusOnBackend] Backend update failed:`,
+            response.error
+          );
+          setStatusMap((currentStatusMap) => {
+            const revertedMap = {
+              ...currentStatusMap,
+              [emailId]: previousStatus,
+            };
+            try {
+              const key = getStorageKey();
+              localStorage.setItem(key, JSON.stringify(revertedMap));
+            } catch (error) {
+              console.error("Failed to revert status:", error);
+            }
+            return revertedMap;
+          });
           return {
             success: false,
             error: response.error || "Failed to update status",
@@ -240,17 +367,20 @@ export function useKanbanStatus(userId = null) {
         }
       } catch (error) {
         // Network error, revert optimistic update
-        const revertedMap = {
-          ...optimisticMap,
-          [emailId]: previousStatus,
-        };
-        setStatusMap(revertedMap);
-        try {
-          const key = getStorageKey();
-          localStorage.setItem(key, JSON.stringify(revertedMap));
-        } catch (err) {
-          console.error("Failed to revert status:", err);
-        }
+        console.error(`[updateStatusOnBackend] Network error:`, error);
+        setStatusMap((currentStatusMap) => {
+          const revertedMap = {
+            ...currentStatusMap,
+            [emailId]: previousStatus,
+          };
+          try {
+            const key = getStorageKey();
+            localStorage.setItem(key, JSON.stringify(revertedMap));
+          } catch (err) {
+            console.error("Failed to revert status:", err);
+          }
+          return revertedMap;
+        });
         return { success: false, error: error.message || "Network error" };
       }
     },
