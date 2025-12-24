@@ -27,22 +27,24 @@ export default function KanbanToolbar({
   }
 
   return (
-    <div className="border-b border-border bg-card/50 backdrop-blur-sm">
+    <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md shadow-sm">
       <div className="px-4 py-3 flex items-center justify-between gap-4">
         {/* Left side - Sorting controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
             <ArrowDownAZ className="h-4 w-4" />
             Sort:
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             <Button
               variant={sortBy === 'newest' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => handleSortClick('newest')}
               className={cn(
-                'text-xs h-8',
-                sortBy === 'newest' && 'bg-primary text-primary-foreground'
+                'text-xs h-8 transition-all duration-200',
+                sortBy === 'newest' 
+                  ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30 hover:shadow-lg' 
+                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
               )}
             >
               <ArrowDownAZ className="h-3.5 w-3.5 mr-1" />
@@ -53,8 +55,10 @@ export default function KanbanToolbar({
               size="sm"
               onClick={() => handleSortClick('oldest')}
               className={cn(
-                'text-xs h-8',
-                sortBy === 'oldest' && 'bg-primary text-primary-foreground'
+                'text-xs h-8 transition-all duration-200',
+                sortBy === 'oldest' 
+                  ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30 hover:shadow-lg' 
+                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
               )}
             >
               <ArrowUpAZ className="h-3.5 w-3.5 mr-1" />
@@ -65,18 +69,20 @@ export default function KanbanToolbar({
 
         {/* Right side - Filter controls */}
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
             <Filter className="h-4 w-4" />
             Filters:
           </span>
-          <div className="flex gap-1">
+          <div className="flex gap-1.5">
             <Button
               variant={filters.showOnlyUnread ? 'default' : 'ghost'}
               size="sm"
               onClick={() => handleFilterToggle('showOnlyUnread')}
               className={cn(
-                'text-xs h-8',
-                filters.showOnlyUnread && 'bg-primary text-primary-foreground'
+                'text-xs h-8 transition-all duration-200',
+                filters.showOnlyUnread 
+                  ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30 hover:shadow-lg' 
+                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
               )}
             >
               <Mail className="h-3.5 w-3.5 mr-1" />
@@ -87,8 +93,10 @@ export default function KanbanToolbar({
               size="sm"
               onClick={() => handleFilterToggle('showOnlyWithAttachments')}
               className={cn(
-                'text-xs h-8',
-                filters.showOnlyWithAttachments && 'bg-primary text-primary-foreground'
+                'text-xs h-8 transition-all duration-200',
+                filters.showOnlyWithAttachments 
+                  ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30 hover:shadow-lg' 
+                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
               )}
             >
               <Paperclip className="h-3.5 w-3.5 mr-1" />
@@ -101,7 +109,7 @@ export default function KanbanToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onClearFilters}
-                className="text-xs h-8 text-muted-foreground hover:text-foreground"
+                className="text-xs h-8 text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40 transition-all duration-200"
               >
                 <X className="h-3.5 w-3.5 mr-1" />
                 Clear

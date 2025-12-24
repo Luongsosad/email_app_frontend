@@ -102,7 +102,8 @@ export const apiCall = async (endpoint, options = {}) => {
     }
 
     // Backend wraps response in { status, code, message, data, meta }
-    return { success: true, data: responseData.data || responseData }
+    const result = { success: true, data: responseData.data || responseData }
+    return result
   } catch (error) {
     console.error('API call error:', error)
     return { success: false, error: error.message }

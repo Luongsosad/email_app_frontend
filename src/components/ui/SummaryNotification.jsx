@@ -39,7 +39,6 @@ export default function SummaryNotification({
 
   const handleClick = () => {
     if (!isLoading && onClick && emailId) {
-      console.log('[SummaryNotification] Clicking to open email:', emailId)
       // Dismiss notification immediately when clicked
       setIsVisible(false)
       // Call onClick handler
@@ -71,11 +70,11 @@ export default function SummaryNotification({
       <div 
         onClick={handleClick}
         className={`
-          bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950
-          border-2 border-amber-300 dark:border-amber-700
-          rounded-xl shadow-2xl p-4 pr-12 max-w-sm
-          ${!isLoading && onClick ? 'cursor-pointer hover:shadow-xl hover:scale-105' : ''}
-          transition-all duration-200
+          bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-100/95 dark:from-amber-950/95 dark:via-orange-950/95 dark:to-amber-900/95
+          border-2 border-amber-300/60 dark:border-amber-700/60
+          rounded-2xl shadow-2xl shadow-amber-500/20 p-4 pr-12 max-w-sm backdrop-blur-md
+          ${!isLoading && onClick ? 'cursor-pointer hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 hover:border-amber-400 dark:hover:border-amber-600' : ''}
+          transition-all duration-300
         `}
       >
         {/* Close button */}
@@ -93,7 +92,7 @@ export default function SummaryNotification({
 
         <div className="flex items-start gap-3">
           {/* Icon */}
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex-shrink-0">
+          <div className="p-2 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/30 rounded-lg flex-shrink-0 shadow-sm">
             {isLoading ? (
               <Loader2 size={20} className="text-amber-600 dark:text-amber-400 animate-spin" />
             ) : (
@@ -107,7 +106,7 @@ export default function SummaryNotification({
               <h4 className="font-bold text-amber-900 dark:text-amber-100 text-sm">
                 {isLoading ? 'AI đang tạo tóm tắt...' : 'Tóm tắt hoàn tất!'}
               </h4>
-              <span className="text-xs px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200 flex items-center gap-1">
+              <span className="text-xs px-2 py-0.5 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-800 dark:to-orange-800 rounded-full text-amber-800 dark:text-amber-200 flex items-center gap-1 shadow-sm">
                 <Sparkles size={10} />
                 Gemini
               </span>

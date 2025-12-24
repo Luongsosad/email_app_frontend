@@ -82,45 +82,51 @@ export default function LoginPage({ onLoginSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+      
+      <div className="w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-500 relative z-10">
+        <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-border/50">
           <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/40 transition-all duration-300 hover:scale-110 hover:shadow-primary/60">
               <span className="text-2xl text-primary-foreground font-bold">📧</span>
             </div>
           </div>
           
-          <h1 className="text-3xl font-bold mb-2 text-center text-primary">ProMail</h1>
-          <p className="text-muted-foreground text-center mb-6">Professional Email Management</p>
+          <h1 className="text-3xl font-bold mb-2 text-center text-gradient tracking-tight">ProMail</h1>
+          <p className="text-muted-foreground text-center mb-8 text-sm">Professional Email Management</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Email Address</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Email Address</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-2.5 rounded-xl font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover-glow mt-2"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -136,7 +142,7 @@ export default function LoginPage({ onLoginSuccess }) {
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="flex items-center justify-center gap-2 border border-border rounded-lg px-4 py-2 hover:bg-accent transition disabled:opacity-50"
+              className="flex items-center justify-center gap-2 border border-border rounded-lg px-4 py-2.5 hover:bg-accent transition-all duration-200 active:scale-95 disabled:opacity-50 shadow-sm hover:shadow-md"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>

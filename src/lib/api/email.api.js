@@ -204,19 +204,12 @@ export const archiveEmail = async (emailId) => {
  */
 export const snoozeEmail = async (emailId, snoozeUntil) => {
   try {
-    console.log(
-      "[snoozeEmail] Snoozing email:",
-      emailId,
-      "until:",
-      snoozeUntil
-    );
     const snoozeDate =
       typeof snoozeUntil === "string" ? snoozeUntil : snoozeUntil.toISOString();
     const result = await apiCall(`/emails/${emailId}/snooze`, {
       method: "POST",
       body: JSON.stringify({ snoozeUntil: snoozeDate }),
     });
-    console.log("[snoozeEmail] Result:", result);
     return result;
   } catch (error) {
     console.error("Error snoozing email:", error);
@@ -246,9 +239,7 @@ export const unsnoozeEmail = async (emailId) => {
  */
 export const getSnoozedEmails = async () => {
   try {
-    console.log("[getSnoozedEmails] Fetching snoozed emails...");
     const result = await apiCall("/emails/snoozed");
-    console.log("[getSnoozedEmails] Result:", result);
     return result;
   } catch (error) {
     console.error("Error fetching snoozed emails:", error);
@@ -327,6 +318,49 @@ export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
 };
 
 /**
+ * Semantic search emails using vector embeddings
+ * @param {string} query - Search query text
+ * @param {number} page - Page number (default: 1)
+ * @param {number} limit - Number of emails per page (default: 20)
+ * @param {Object} filters - Optional filters
+ * @param {boolean} filters.unreadOnly - Filter unread emails only
+ * @param {string} filters.sender - Filter by sender email or name
+ * @param {string} filters.status - Filter by email status (inbox, todo, in-progress, done, snoozed)
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const searchEmailsSemantic = async (
+  query,
+  page = 1,
+  limit = 20,
+  filters = {}
+) => {
+  try {
+    if (!query || !query.trim()) {
+      return { success: false, error: "Query is required" };
+    }
+
+    const requestBody = {
+      query: query.trim(),
+      page,
+      limit,
+      ...(filters.unreadOnly !== undefined && {
+        unreadOnly: filters.unreadOnly,
+      }),
+      ...(filters.sender && { sender: filters.sender }),
+      ...(filters.status && { status: filters.status }),
+    };
+
+    return await apiCall(API_ENDPOINTS.SEARCH.SEMANTIC, {
+      method: "POST",
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    console.error("Error searching emails (semantic):", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Get email kanban status
  * @param {string} emailId - The email ID
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
@@ -344,14 +378,32 @@ export const getEmailStatus = async (emailId) => {
  * Update email kanban status
  * @param {string} emailId - The email ID
  * @param {string} status - The kanban status ('inbox' | 'todo' | 'in-progress' | 'done' | 'snoozed')
+ * @param {string|null} gmailLabelId - Gmail label ID to sync (optional)
+ * @param {string|null} oldGmailLabelId - Previous Gmail label ID to remove (optional)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const updateEmailStatus = async (emailId, status) => {
+export const updateEmailStatus = async (
+  emailId,
+  status,
+  gmailLabelId = null,
+  oldGmailLabelId = null
+) => {
   try {
-    return await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
+    const body = { status };
+    if (gmailLabelId) {
+      body.gmailLabelId = gmailLabelId;
+    }
+    if (oldGmailLabelId) {
+      body.oldGmailLabelId = oldGmailLabelId;
+    }
+    const result = await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
       method: "PUT",
-      body: JSON.stringify({ status }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
     });
+    return result;
   } catch (error) {
     console.error("Error updating email status:", error);
     return { success: false, error: error.message };

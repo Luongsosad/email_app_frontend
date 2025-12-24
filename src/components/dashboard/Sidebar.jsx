@@ -71,51 +71,69 @@ export default function Sidebar({
   const folders = getFolderData()
 
   return (
-    <div className="w-64 bg-card border-r border-border flex flex-col overflow-hidden">
+    <div className="w-64 max-md:w-full max-md:h-auto max-md:border-r-0 max-md:border-b bg-card border-r border-border flex flex-col overflow-hidden shadow-lg">
       {/* Logo */}
-      <div className="px-6 py-4 border-b border-border">
+      <div className="px-6 py-5 border-b border-border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 min-h-[31px] bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-primary/40">
             <span className="text-xl text-primary-foreground font-bold">📧</span>
           </div>
-          <span className="text-xl font-bold text-foreground">MailBox</span>
+          <span className="text-xl font-bold text-gradient tracking-tight">MailBox</span>
         </div>
       </div>
 
       {/* Compose Button */}
-      <button
-        onClick={onCompose}
-        className="m-4 bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:bg-primary/90 transition flex items-center justify-center gap-2"
-      >
-        <span>✏️</span> Compose
-      </button>
+      <div className="px-4 pt-4 pb-2">
+        <button
+          onClick={onCompose}
+          className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-2.5 rounded-xl font-semibold hover:from-primary/90 hover:to-secondary/90 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover-glow"
+        >
+          <span className="text-base">✏️</span>
+          <span>Compose</span>
+        </button>
+      </div>
 
       {/* Folders */}
-      <nav className="flex-1 overflow-y-auto px-2 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={24} className="animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 size={24} className="animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground">Loading folders...</p>
+            </div>
+          </div>
+        ) : folders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <Mail size={32} className="text-muted-foreground/50 mb-2" />
+            <p className="text-sm text-muted-foreground text-center">No folders available</p>
           </div>
         ) : (
           folders.map((folder) => {
             const Icon = folder.icon
             const count = folder.unreadCount
+            const isSelected = selectedFolder === folder.key
             
             return (
               <button
                 key={folder.key}
                 onClick={() => onFolderSelect(folder.key)}
-                className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                  selectedFolder === folder.key
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted'
+                aria-label={`Select ${folder.label} folder`}
+                aria-current={isSelected ? 'page' : undefined}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold shadow-md shadow-primary/20 border-l-4 border-primary'
+                    : 'text-muted-foreground hover:bg-gradient-to-r hover:from-muted/50 hover:to-muted/30 hover:text-foreground hover:shadow-sm'
                 }`}
               >
-                <Icon size={20} />
-                <span className="flex-1 text-left">{folder.label}</span>
+                <Icon size={18} className={isSelected ? 'text-primary' : ''} />
+                <span className="flex-1 text-left text-sm">{folder.label}</span>
                 {count > 0 && (
-                  <span className="bg-primary text-primary-foreground text-xs font-bold rounded-full px-2 py-0.5">
-                    {count}
+                  <span className={`text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center transition-all duration-200 ${
+                    isSelected 
+                      ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30' 
+                      : 'bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10 text-muted-foreground'
+                  }`}>
+                    {count > 99 ? '99+' : count}
                   </span>
                 )}
               </button>
@@ -125,26 +143,26 @@ export default function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border px-4 py-4 space-y-2">
-        <div className="px-2 py-2 truncate">
-          <p className="text-xs text-muted-foreground">Signed in as</p>
-          <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+      <div className="border-t border-border bg-gradient-to-t from-muted/40 to-muted/20 backdrop-blur-sm px-4 py-3 space-y-1.5">
+        <div className="px-2 py-2 rounded-lg bg-background/60 backdrop-blur-sm border border-border/50 shadow-sm">
+          <p className="text-xs text-muted-foreground mb-0.5">Signed in as</p>
+          <p className="text-sm font-medium text-foreground truncate">{user?.email || 'Unknown'}</p>
         </div>
         
         <button
           onClick={onSettings}
-          className="w-full flex items-center gap-3 px-2 py-2 text-muted-foreground hover:text-foreground transition"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40 transition-all duration-300 active:scale-[0.98] hover:shadow-sm"
         >
           <Settings size={18} />
-          <span>Settings</span>
+          <span className="text-sm">Settings</span>
         </button>
 
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-2 py-2 text-muted-foreground hover:text-destructive transition"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-gradient-to-r hover:from-destructive/10 hover:to-destructive/5 transition-all duration-300 active:scale-[0.98] hover:shadow-sm"
         >
           <LogOut size={18} />
-          <span>Sign Out</span>
+          <span className="text-sm">Sign Out</span>
         </button>
       </div>
     </div>
