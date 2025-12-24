@@ -123,7 +123,7 @@ export default function DashboardPage({ user, onLogout }) {
             })
           }
         } catch (error) {
-          console.error('[DashboardPage] Failed to fetch kanban emails:', error)
+          // Silently handle error - toast will be shown by fetchEmails
         }
       } else {
         // In List view, fetch selected folder
@@ -145,8 +145,8 @@ export default function DashboardPage({ user, onLogout }) {
     if (emailIdsString && viewMode === 'kanban') {
       const emailIds = emailIdsString.split(',').filter(id => id)
       if (emailIds.length > 0) {
-        syncWithBackend(emailIds).catch((error) => {
-          console.error('Failed to sync kanban statuses:', error)
+        syncWithBackend(emailIds).catch(() => {
+          // Silently handle sync errors
         })
       }
     }
@@ -159,8 +159,6 @@ export default function DashboardPage({ user, onLogout }) {
         const result = await emailApi.checkExpiredSnoozes()
         // If any snoozes were restored, update local state immediately
         if (result?.data?.restoredCount > 0 && result?.data?.restoredEmailIds) {
-          console.log('[DashboardPage] Expired snoozes detected:', result.data.restoredEmailIds)
-          
           // Update local state to remove snoozedUntil from expired emails
           setEmails(prevEmails =>
             prevEmails.map(email =>
@@ -251,8 +249,8 @@ export default function DashboardPage({ user, onLogout }) {
       setViewMode('traditional')
       try {
         localStorage.setItem(VIEW_MODE_STORAGE_KEY, 'traditional')
-      } catch (error) {
-        console.error('Failed to save view mode preference:', error)
+      } catch {
+        // Silently handle localStorage errors
       }
     }
 
@@ -279,8 +277,8 @@ export default function DashboardPage({ user, onLogout }) {
       setViewMode('traditional')
       try {
         localStorage.setItem(VIEW_MODE_STORAGE_KEY, 'traditional')
-      } catch (error) {
-        console.error('Failed to save view mode preference:', error)
+      } catch {
+        // Silently handle localStorage errors
       }
     }
 
@@ -323,6 +321,37 @@ export default function DashboardPage({ user, onLogout }) {
     // Fetch full email detail
     fetchEmailDetail(email.id)
   }, [markAsRead, fetchEmailDetail])
+
+  // Handle email moved in Kanban - fetch email detail if not in array
+  const handleEmailMoved = useCallback(async (emailId) => {
+    try {
+      const result = await fetchEmailDetail(emailId)
+      if (result.success && result.data) {
+        // Convert email detail to email list item format
+        const emailListItem = {
+          id: result.data.id,
+          senderName: result.data.from ? result.data.from.split('<')[0].trim() : '',
+          subject: result.data.subject || '',
+          preview: result.data.body ? result.data.body.substring(0, 100) : '',
+          timestamp: result.data.receivedDate ? new Date(result.data.receivedDate) : new Date(),
+          isStarred: result.data.isStarred || false,
+          isRead: result.data.isRead !== false,
+          snoozedUntil: null,
+        }
+        
+        // Add to emails array if not already present
+        setEmails(prevEmails => {
+          const exists = prevEmails.find(e => e.id === emailId)
+          if (exists) {
+            return prevEmails
+          }
+          return [...prevEmails, emailListItem]
+        })
+      }
+    } catch (error) {
+      // Silently handle error - email will be fetched on next refresh
+    }
+  }, [fetchEmailDetail, setEmails])
 
   const handleStarEmail = useCallback(async (emailId, isStarred) => {
     // If isStarred is not provided, find it from emails or emailDetail
@@ -410,9 +439,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleSnooze = useCallback(async (emailId, snoozeUntil) => {
     try {
-      console.log('[DashboardPage] Snoozing email:', emailId, 'until:', snoozeUntil)
       const result = await emailApi.snoozeEmail(emailId, snoozeUntil)
-      console.log('[DashboardPage] Snooze result:', result)
       
       if (result?.success) {
         toast({
@@ -508,8 +535,8 @@ export default function DashboardPage({ user, onLogout }) {
     setViewMode(newMode)
     try {
       localStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode)
-    } catch (error) {
-      console.error('Failed to save view mode preference:', error)
+    } catch {
+      // Silently handle localStorage errors
     }
   }, [viewMode, isSearchMode, handleClearSearch])
 
@@ -530,8 +557,6 @@ export default function DashboardPage({ user, onLogout }) {
   }, [])
 
   const handleSummaryNotificationClick = useCallback(async (emailId) => {
-    console.log('[DashboardPage] Notification clicked for email:', emailId)
-    
     // Dismiss notification immediately
     setSummaryNotification({
       isLoading: false,
@@ -541,7 +566,6 @@ export default function DashboardPage({ user, onLogout }) {
     
     // If already selected, just dismiss
     if (selectedEmail?.id === emailId) {
-      console.log('[DashboardPage] Email already selected')
       return
     }
     
@@ -550,7 +574,6 @@ export default function DashboardPage({ user, onLogout }) {
     
     // If not found, search in INBOX
     if (!email) {
-      console.log('[DashboardPage] Searching in INBOX...')
       try {
         const { fetchEmailsByMailbox } = await import('@/lib/api/email.api')
         const result = await fetchEmailsByMailbox('INBOX', 1, 100)
@@ -564,7 +587,6 @@ export default function DashboardPage({ user, onLogout }) {
     
     // If still not found, fetch detail
     if (!email) {
-      console.log('[DashboardPage] Fetching detail...')
       try {
         await fetchEmailDetail(emailId)
         await new Promise(resolve => setTimeout(resolve, 150))
@@ -609,12 +631,12 @@ export default function DashboardPage({ user, onLogout }) {
 
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background overflow-hidden max-md:flex-col">
       {/* Error alerts */}
       {(emailError || mailboxError) && (
-        <div className="absolute top-4 right-4 z-50 max-w-md">
-          <Alert variant="destructive">
-            <AlertDescription>
+        <div className="absolute top-4 right-4 z-50 max-w-md animate-in slide-in-from-top-5">
+          <Alert variant="destructive" className="shadow-lg">
+            <AlertDescription className="font-medium">
               {emailError || mailboxError}
             </AlertDescription>
           </Alert>
@@ -643,27 +665,31 @@ export default function DashboardPage({ user, onLogout }) {
         loading={mailboxLoading}
       />
       
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden max-md:min-h-0">
         {/* Header with View Toggle and Search Bar */}
-        <div className="border-b border-border bg-card">
-          <div className="flex items-center gap-4 px-4 h-16">
+        <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md shadow-lg">
+          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-14 sm:h-16">
             {/* View Toggle Button */}
             <Button
               variant={viewMode === 'traditional' ? 'default' : 'outline'}
               size="sm"
               onClick={handleToggleViewMode}
-              className="gap-2 flex-shrink-0"
+              className={`gap-2 flex-shrink-0 transition-all duration-300 ${
+                viewMode === 'traditional' 
+                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40' 
+                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
+              }`}
               title={viewMode === 'traditional' ? 'Switch to Kanban view' : 'Switch to List view'}
             >
               {viewMode === 'traditional' ? (
                 <>
                   <LayoutGrid size={16} />
-                  <span className="hidden sm:inline">Kanban View</span>
+                  <span className="hidden sm:inline">Kanban</span>
                 </>
               ) : (
                 <>
                   <List size={16} />
-                  <span className="hidden sm:inline">List View</span>
+                  <span className="hidden sm:inline">List</span>
                 </>
               )}
             </Button>
@@ -686,9 +712,9 @@ export default function DashboardPage({ user, onLogout }) {
                 variant="outline"
                 size="sm"
                 onClick={handleClearSearch}
-                className="flex-shrink-0"
+                className="flex-shrink-0 transition-all duration-200"
               >
-                Clear search
+                Clear
               </Button>
             )}
           </div>
@@ -704,6 +730,7 @@ export default function DashboardPage({ user, onLogout }) {
               loading={emailLoading}
               user={user}
               onRefresh={() => fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)}
+              onEmailMoved={handleEmailMoved}
             />
             
             {selectedEmail && (
@@ -715,35 +742,6 @@ export default function DashboardPage({ user, onLogout }) {
                 onDelete={handleDelete}
                 onArchive={handleArchive}
                 loading={emailDetailLoading}
-              />
-            )}
-          </div>
-        ) : isSearchMode ? (
-          <div className="flex-1 flex overflow-hidden">
-            <SearchResultsView
-              emails={emails}
-              loading={emailLoading}
-              error={emailError}
-              searchQuery={searchQuery}
-              pagination={pagination}
-              onPageChange={handlePageChange}
-              selectedEmail={selectedEmail}
-              onSelectEmail={handleSelectEmail}
-              onBack={handleClearSearch}
-            />
-
-            {selectedEmail && (
-              <MailViewer
-                email={emailDetail || selectedEmail}
-                onBack={() => setSelectedEmail(null)}
-                onStar={handleStarEmail}
-                onSpam={handleMoveToSpam}
-                onDelete={handleDelete}
-                onArchive={handleArchive}
-                onSnooze={handleSnooze}
-                loading={emailDetailLoading}
-                onSummaryStart={handleSummaryStart}
-                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>

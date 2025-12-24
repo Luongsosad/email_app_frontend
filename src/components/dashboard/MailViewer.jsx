@@ -172,60 +172,65 @@ export default function MailViewer({
   }, [email.body])
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l border-border">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l max-md:border-l-0 max-md:border-t border-border shadow-lg">
       {/* Header */}
-      <div className="border-b border-border p-4 flex items-center justify-between">
+      <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <button
           onClick={onBack}
-          className="text-muted-foreground hover:text-foreground transition"
+          aria-label="Close email viewer"
+          className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+          title="Back"
         >
-          <X size={24} />
+          <X size={20} />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => onStar(email.id, email.isStarred)}
-            className="p-2 text-muted-foreground hover:text-primary transition"
+            className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+              email.isStarred 
+                ? 'text-primary bg-primary/10' 
+                : 'text-muted-foreground hover:text-primary hover:bg-muted'
+            }`}
             title={email.isStarred ? 'Remove star' : 'Add star'}
           >
             <Star
-              size={20}
+              size={18}
               fill={email.isStarred ? 'currentColor' : 'none'}
-              className={email.isStarred ? 'text-primary' : ''}
             />
           </button>
 
           <button
             onClick={() => setShowReply(true)}
-            className="p-2 text-muted-foreground hover:text-foreground transition"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
             title="Reply"
           >
-            <Reply size={20} />
+            <Reply size={18} />
           </button>
 
           <button
             onClick={() => setShowForward(true)}
-            className="p-2 text-muted-foreground hover:text-foreground transition"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
             title="Forward"
           >
-            <Forward size={20} />
+            <Forward size={18} />
           </button>
 
           <button
             onClick={() => setShowSnooze(true)}
-            className="p-2 text-muted-foreground hover:text-foreground transition"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
             title="Snooze"
           >
-            <Clock size={20} />
+            <Clock size={18} />
           </button>
 
           <button
             onClick={handleGenerateSummary}
             disabled={loadingSummary}
-            className={`p-2 transition ${
+            className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
               summary 
-                ? 'text-amber-500 hover:text-amber-600' 
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20' 
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
             } ${loadingSummary ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={
               loadingSummary 
@@ -236,34 +241,34 @@ export default function MailViewer({
             }
           >
             {loadingSummary ? (
-              <Loader2 size={20} className="animate-spin" />
+              <Loader2 size={18} className="animate-spin" />
             ) : (
-              <Sparkles size={20} />
+              <Sparkles size={18} />
             )}
           </button>
 
           <button
             onClick={() => setShowConfirmArchive(true)}
-            className="p-2 text-muted-foreground hover:text-foreground transition"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
             title="Archive"
           >
-            <Archive size={20} />
+            <Archive size={18} />
           </button>
 
           <button
             onClick={() => setShowConfirmSpam(true)}
-            className="p-2 text-muted-foreground hover:text-orange-500 transition"
+            className="p-2 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all duration-200 active:scale-95"
             title="Spam"
           >
-            <AlertCircle size={20} />
+            <AlertCircle size={18} />
           </button>
 
           <button
             onClick={() => setShowConfirmDelete(true)}
-            className="p-2 text-muted-foreground hover:text-destructive transition"
+            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200 active:scale-95"
             title="Delete"
           >
-            <Trash2 size={20} />
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
@@ -272,36 +277,40 @@ export default function MailViewer({
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <Loader2 size={32} className="animate-spin mx-auto mb-2 text-muted-foreground" />
-            <p className="text-muted-foreground">Loading email...</p>
+            <Loader2 size={40} className="animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-base font-medium text-foreground mb-1">Loading email...</p>
+            <p className="text-sm text-muted-foreground">Please wait</p>
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 max-w-3xl mx-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <div className="p-6 lg:p-8 max-w-4xl mx-auto">
             {/* Subject */}
-            <h1 className="text-3xl font-bold mb-4 text-foreground">{email.subject || '(No Subject)'}</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-6 text-foreground leading-tight">
+              {email.subject || '(No Subject)'}
+            </h1>
 
             {/* From/To Info */}
-            <div className="bg-muted/30 border border-border rounded-lg p-4 mb-6">
+            <div className="bg-gradient-to-br from-muted/50 via-muted/30 to-muted/20 border border-border rounded-xl p-5 mb-6 shadow-lg backdrop-blur-sm">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg font-bold text-primary-foreground">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/30">
+                  <span className="text-xl font-bold text-primary-foreground">
                     {senderName.charAt(0).toUpperCase()}
                   </span>
                 </div>
 
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground">{senderName}</p>
-                  <p className="text-sm text-muted-foreground">{senderEmail}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-base text-foreground mb-1">{senderName}</p>
+                  <p className="text-sm text-muted-foreground truncate">{senderEmail}</p>
 
                   {email.cc && email.cc.length > 0 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      <strong>Cc:</strong> {Array.isArray(email.cc) ? email.cc.join(', ') : email.cc}
+                    <p className="text-sm text-muted-foreground mt-2">
+                      <span className="font-medium">Cc:</span> {Array.isArray(email.cc) ? email.cc.join(', ') : email.cc}
                     </p>
                   )}
 
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                    <Clock size={12} />
                     {formatDate(new Date(email.receivedDate || email.timestamp))}
                   </p>
                 </div>
@@ -310,9 +319,9 @@ export default function MailViewer({
 
             {/* To recipients */}
             {email.to && (
-              <div className="mb-6 text-sm bg-muted/20 border border-border rounded-lg p-3">
+              <div className="mb-6 text-sm bg-muted/20 border border-border rounded-lg p-3.5">
                 <p className="text-muted-foreground">
-                  <strong>To:</strong> {Array.isArray(email.to) ? email.to.join(', ') : email.to}
+                  <span className="font-medium">To:</span> {Array.isArray(email.to) ? email.to.join(', ') : email.to}
                 </p>
               </div>
             )}
@@ -320,15 +329,15 @@ export default function MailViewer({
             {/* Summary */}
             {/* Don't show inline loading if using global notification */}
             {loadingSummary && !summary && !onSummaryStart && (
-              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
+              <div className="mb-6 bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-100/95 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-900/20 border-2 border-amber-200/60 dark:border-amber-800/60 rounded-2xl p-5 shadow-lg shadow-amber-500/10 backdrop-blur-sm">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/30 rounded-lg shadow-sm">
                     <Loader2 size={20} className="text-amber-600 dark:text-amber-400 animate-spin" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2 text-base flex items-center gap-2">
                       AI đang tạo tóm tắt...
-                      <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
+                      <span className="text-xs font-normal px-2 py-0.5 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-800 dark:to-orange-800 rounded-full text-amber-800 dark:text-amber-200 shadow-sm">
                         Gemini
                       </span>
                     </h3>
@@ -341,15 +350,15 @@ export default function MailViewer({
             )}
             
             {summary && (
-              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-2 border-amber-200 dark:border-amber-800 rounded-xl p-5 shadow-sm">
+              <div className="mb-6 bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-100/95 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-900/20 border-2 border-amber-200/60 dark:border-amber-800/60 rounded-2xl p-5 shadow-lg shadow-amber-500/10 backdrop-blur-sm">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <div className="p-2 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/40 dark:to-orange-900/30 rounded-lg shadow-sm">
                     <Sparkles size={20} className="text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-amber-900 dark:text-amber-100 mb-2 text-base flex items-center gap-2">
                       AI Summary
-                      <span className="text-xs font-normal px-2 py-0.5 bg-amber-200 dark:bg-amber-800 rounded-full text-amber-800 dark:text-amber-200">
+                      <span className="text-xs font-normal px-2 py-0.5 bg-gradient-to-r from-amber-200 to-orange-200 dark:from-amber-800 dark:to-orange-800 rounded-full text-amber-800 dark:text-amber-200 shadow-sm">
                         Gemini
                       </span>
                       {loadingSummary && (
@@ -363,9 +372,10 @@ export default function MailViewer({
             )}
 
             {/* Body */}
-            <div className="mb-6 border border-border rounded-lg p-4 bg-card">
+            <div className="mb-8 border border-border rounded-xl p-6 bg-gradient-to-br from-card via-card to-muted/20 shadow-lg backdrop-blur-sm">
               <div 
-                className="email-content text-foreground"
+                className="email-content text-foreground prose prose-sm max-w-none dark:prose-invert"
+                style={{ lineHeight: '1.7' }}
                 dangerouslySetInnerHTML={{ __html: sanitizedBody }}
               />
             </div>
@@ -373,31 +383,31 @@ export default function MailViewer({
             {/* Attachments */}
             {email.attachments && email.attachments.length > 0 && (
               <div className="border-t-2 border-border pt-6 mt-6">
-                <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
-                  <Paperclip size={18} />
+                <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2 text-lg">
+                  <Paperclip size={20} className="text-primary" />
                   Attachments ({email.attachments.length})
                 </h3>
-                <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-3">
                   {email.attachments.map(attachment => (
                     <button
                       key={attachment.id}
                       onClick={() => handleDownloadAttachment(attachment)}
                       disabled={downloadingAttachments.has(attachment.id)}
-                      className="w-full flex items-center gap-3 p-3 bg-muted rounded-lg hover:bg-muted/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-muted/60 to-muted/40 hover:from-muted/80 hover:to-muted/60 border border-border rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
                     >
-                      <div className="w-8 h-8 bg-primary/20 rounded flex items-center justify-center flex-shrink-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 border border-primary/30 shadow-sm">
                         <span className="text-xs font-bold text-primary">
-                          {attachment.name.split('.').pop()?.toUpperCase().substring(0, 3)}
+                          {attachment.name.split('.').pop()?.toUpperCase().substring(0, 3) || 'FILE'}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium text-foreground truncate">{attachment.name}</p>
+                        <p className="text-sm font-medium text-foreground truncate mb-0.5">{attachment.name}</p>
                         <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
                       </div>
                       {downloadingAttachments.has(attachment.id) ? (
-                        <Loader2 size={18} className="animate-spin text-primary" />
+                        <Loader2 size={20} className="animate-spin text-primary flex-shrink-0" />
                       ) : (
-                        <Download size={18} className="text-muted-foreground" />
+                        <Download size={20} className="text-muted-foreground flex-shrink-0" />
                       )}
                     </button>
                   ))}

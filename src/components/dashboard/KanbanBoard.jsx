@@ -17,6 +17,7 @@ export default function KanbanBoard({
   loading = false,
   user = null,
   onRefresh,
+  onEmailMoved, // Callback to add email to array if missing
 }) {
   const { toast } = useToast()
   
@@ -75,21 +76,6 @@ export default function KanbanBoard({
 
   // Organize emails into columns with sorting and filtering applied
   const emailsByColumn = useMemo(() => {
-    const emailIds = emails.map(e => e.id);
-    const statusMapKeys = Object.keys(statusMap || {});
-    const missingInStatusMap = emailIds.filter(id => !statusMapKeys.includes(id));
-    const missingInEmails = statusMapKeys.filter(id => !emailIds.includes(id));
-    
-    console.log(`[KanbanBoard] Computing emailsByColumn: isLoaded=${isLoaded}, columnsLoaded=${columnsLoaded}, emails.length=${emails.length}`);
-    console.log(`[KanbanBoard] Email IDs in emails array (${emailIds.length}):`, emailIds);
-    console.log(`[KanbanBoard] StatusMap keys (${statusMapKeys.length}):`, statusMapKeys);
-    if (missingInStatusMap.length > 0) {
-      console.warn(`[KanbanBoard] ⚠️ Emails NOT in statusMap:`, missingInStatusMap);
-    }
-    if (missingInEmails.length > 0) {
-      console.warn(`[KanbanBoard] ⚠️ StatusMap keys NOT in emails array:`, missingInEmails);
-    }
-    
     if (!isLoaded || !columnsLoaded) {
       // Return empty columns structure based on dynamic columns
       const emptyColumns = {}
@@ -109,8 +95,8 @@ export default function KanbanBoard({
     }
     
     // First organize emails by column (pass dynamic columns for custom column support)
-    const organizedByColumn = getEmailsByColumn(emails, dynamicColumns)
-    console.log(`[KanbanBoard] Organized by column:`, Object.keys(organizedByColumn).map(colId => ({ colId, count: organizedByColumn[colId]?.length || 0 })))
+    // Pass statusMap directly to ensure we use the latest value
+    const organizedByColumn = getEmailsByColumn(emails, dynamicColumns, statusMap)
     
     // Then apply sorting and filtering to each column
     const processedByColumn = {}
@@ -118,8 +104,6 @@ export default function KanbanBoard({
     dynamicColumns.forEach(col => {
       processedByColumn[col.id] = procesEmails(organizedByColumn[col.id] || [])
     })
-    
-    console.log(`[KanbanBoard] Final processedByColumn:`, Object.keys(processedByColumn).map(colId => ({ colId, count: processedByColumn[colId]?.length || 0 })))
     
     return processedByColumn
   }, [emails, getEmailsByColumn, isLoaded, columnsLoaded, dynamicColumns, procesEmails, sortBy, filters, columnsVersion, statusMap])
@@ -188,7 +172,6 @@ export default function KanbanBoard({
     const newGmailLabelId = destinationColumn?.gmailLabelId || null
 
     // Update status on backend for other columns
-    console.log(`[KanbanBoard] Moving email ${emailId} from ${sourceColumnId} to ${destinationColumnId}`)
     const result = await updateStatusOnBackend(
       emailId, 
       destinationColumnId, 
@@ -196,9 +179,13 @@ export default function KanbanBoard({
       oldGmailLabelId
     )
     
-    console.log(`[KanbanBoard] Update result:`, result)
-    
     if (result.success) {
+      // Check if email is in emails array, if not, fetch it
+      const emailInArray = emails.find(e => e.id === emailId)
+      if (!emailInArray && onEmailMoved) {
+        onEmailMoved(emailId)
+      }
+      
       toast({
         title: 'Email moved',
         description: `Email moved to ${destinationColumn?.title || destinationColumnId}`,
@@ -206,7 +193,6 @@ export default function KanbanBoard({
       // UI is already updated via optimistic update in updateStatusOnBackend
       // No need to refresh from server
     } else {
-      console.error(`[KanbanBoard] Failed to move email:`, result.error)
       toast({
         title: 'Error',
         description: result.error || 'Failed to move email',
@@ -224,10 +210,10 @@ export default function KanbanBoard({
       <div className="flex-1 flex flex-col overflow-hidden bg-background relative">
         {/* Loading overlay when syncing statuses - centered and larger */}
         {(loading || isSyncing) && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-4 bg-card border border-border rounded-lg px-8 py-6 shadow-xl">
-              <Loader2 size={32} className="animate-spin text-primary" />
-              <span className="text-base font-medium text-foreground">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md animate-in fade-in-0">
+            <div className="flex flex-col items-center gap-4 bg-card/90 backdrop-blur-xl border border-border rounded-2xl px-8 py-6 shadow-2xl shadow-primary/20">
+              <Loader2 size={36} className="animate-spin text-primary" />
+              <span className="text-base font-semibold text-foreground">
                 {loading ? 'Loading emails...' : 'Syncing statuses...'}
               </span>
             </div>
@@ -246,18 +232,23 @@ export default function KanbanBoard({
 
         {/* Kanban Board Container */}
         {columnsLoaded && (
-          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4">
+          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
             <div className="flex gap-4 h-full min-w-max">
-              {dynamicColumns.map((column) => (
-                <KanbanColumn
+              {dynamicColumns.map((column, index) => (
+                <div
                   key={column.id}
-                  columnId={column.id}
-                  title={column.title}
-                  emails={emailsByColumn[column.id] || []}
-                  selectedEmail={selectedEmail}
-                  onCardClick={onSelectEmail}
-                  loading={loading && !isLoaded}
-                />
+                  style={{ animationDelay: `${index * 100}ms` }}
+                  className="animate-in fade-in-0 slide-in-from-left-4"
+                >
+                  <KanbanColumn
+                    columnId={column.id}
+                    title={column.title}
+                    emails={emailsByColumn[column.id] || []}
+                    selectedEmail={selectedEmail}
+                    onCardClick={onSelectEmail}
+                    loading={loading && !isLoaded}
+                  />
+                </div>
               ))}
             </div>
           </div>

@@ -68,7 +68,7 @@ function SearchSuggestions({
     return (
       <>
         {before}
-        <span className="font-semibold bg-primary/20">{match}</span>
+        <span className="font-semibold bg-gradient-to-r from-primary/30 to-secondary/30 text-primary px-0.5 rounded">{match}</span>
         {after}
       </>
     )
@@ -81,10 +81,10 @@ function SearchSuggestions({
   }
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 max-h-[200px] overflow-hidden">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-card/95 backdrop-blur-md border border-border rounded-xl shadow-2xl shadow-primary/10 z-50 max-h-[200px] overflow-hidden animate-in fade-in-0 slide-in-from-top-2">
       <div
         ref={listRef}
-        className="overflow-y-auto max-h-[200px]"
+        className="overflow-y-auto max-h-[200px] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
       >
         {suggestions.map((suggestion, index) => (
           <div
@@ -92,10 +92,10 @@ function SearchSuggestions({
             ref={(el) => (itemRefs.current[index] = el)}
             onClick={() => handleClick(suggestion)}
             className={`
-              flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors
+              flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all duration-200
               ${selectedIndex === index 
-                ? 'bg-primary/10 text-primary' 
-                : 'hover:bg-muted'
+                ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-medium shadow-sm' 
+                : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
               }
             `}
           >

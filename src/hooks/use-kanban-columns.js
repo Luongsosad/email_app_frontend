@@ -162,7 +162,6 @@ export function useKanbanColumns(userId = null) {
     (columnId) => {
       // Never allow deleting inbox column
       if (columnId === 'inbox') {
-        console.warn('Inbox column cannot be deleted')
         return false
       }
 
@@ -170,7 +169,6 @@ export function useKanbanColumns(userId = null) {
 
       // Ensure at least one column remains
       if (nextColumns.length === 0) {
-        console.warn('At least one column must exist')
         return false
       }
 

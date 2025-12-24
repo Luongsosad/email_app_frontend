@@ -97,71 +97,77 @@ export default function SignupPage({ onSignupSuccess }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+      
+      <div className="w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-500 relative z-10">
+        <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-border/50">
           <div className="flex justify-center mb-6">
-            <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/40 transition-all duration-300 hover:scale-110 hover:shadow-primary/60">
               <span className="text-2xl text-primary-foreground font-bold">📧</span>
             </div>
           </div>
 
-          <h1 className="text-3xl font-bold mb-2 text-center text-primary">Create Account</h1>
-          <p className="text-muted-foreground text-center mb-6">Join ProMail today</p>
+          <h1 className="text-3xl font-bold mb-2 text-center text-gradient tracking-tight">Create Account</h1>
+          <p className="text-muted-foreground text-center mb-8 text-sm">Join ProMail today</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Full Name</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Full Name</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="John Doe"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Email Address</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Email Address</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Password</label>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Confirm Password</label>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Confirm Password</label>
               <input
                 type="password"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                className="w-full px-4 py-2.5 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background transition-all duration-200"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-2.5 rounded-xl font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover-glow mt-2"
             >
               {loading ? 'Creating Account...' : 'Sign Up'}
             </button>

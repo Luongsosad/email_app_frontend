@@ -48,7 +48,6 @@ export default function KanbanCard({
     // Listen for summary updates from other components
     const handleSummaryUpdate = (event) => {
       if (event.detail.emailId === email.id) {
-        console.log('[KanbanCard] Updating summary for email:', email.id)
         setSummary(event.detail.summary)
       }
     }
@@ -81,11 +80,11 @@ export default function KanbanCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'relative w-full bg-card border border-border rounded-lg shadow-sm text-left transition-all',
-        isDragging && 'shadow-lg rotate-2',
-        !isDragging && 'hover:shadow-md hover:border-primary/50',
-        isSelected && 'ring-2 ring-primary border-primary',
-        !email.isRead && 'bg-accent/10 border-accent/20'
+        'relative w-full bg-gradient-to-br from-card to-muted/20 border border-border rounded-xl shadow-md text-left transition-all duration-300',
+        isDragging && 'shadow-2xl shadow-primary/30 rotate-2 scale-105',
+        !isDragging && 'hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50 hover:scale-[1.02]',
+        isSelected && 'ring-2 ring-primary border-primary shadow-lg shadow-primary/30',
+        !email.isRead && 'bg-gradient-to-br from-accent/15 to-accent/5 border-accent/30'
       )}
     >
       {/* Drag Handle */}
@@ -137,7 +136,7 @@ export default function KanbanCard({
 
         {/* Summary (if available) */}
         {summary && (
-          <div className="flex items-start gap-1.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded px-2 py-1.5 mt-1">
+          <div className="flex items-start gap-1.5 bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/60 dark:border-amber-800/60 rounded-lg px-2.5 py-2 mt-1 shadow-sm">
             <Sparkles size={12} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-amber-800 dark:text-amber-200 line-clamp-2">
               {summary}
@@ -167,7 +166,7 @@ export default function KanbanCard({
 
         {/* Unread indicator */}
         {!email.isRead && (
-          <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
+          <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-br from-primary to-secondary rounded-full shadow-md shadow-primary/50" />
         )}
       </div>
       </button>

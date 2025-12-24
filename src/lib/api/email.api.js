@@ -204,19 +204,12 @@ export const archiveEmail = async (emailId) => {
  */
 export const snoozeEmail = async (emailId, snoozeUntil) => {
   try {
-    console.log(
-      "[snoozeEmail] Snoozing email:",
-      emailId,
-      "until:",
-      snoozeUntil
-    );
     const snoozeDate =
       typeof snoozeUntil === "string" ? snoozeUntil : snoozeUntil.toISOString();
     const result = await apiCall(`/emails/${emailId}/snooze`, {
       method: "POST",
       body: JSON.stringify({ snoozeUntil: snoozeDate }),
     });
-    console.log("[snoozeEmail] Result:", result);
     return result;
   } catch (error) {
     console.error("Error snoozing email:", error);
@@ -246,9 +239,7 @@ export const unsnoozeEmail = async (emailId) => {
  */
 export const getSnoozedEmails = async () => {
   try {
-    console.log("[getSnoozedEmails] Fetching snoozed emails...");
     const result = await apiCall("/emails/snoozed");
-    console.log("[getSnoozedEmails] Result:", result);
     return result;
   } catch (error) {
     console.error("Error fetching snoozed emails:", error);
@@ -337,23 +328,30 @@ export const searchEmailsFuzzy = async (query, page = 1, limit = 20) => {
  * @param {string} filters.status - Filter by email status (inbox, todo, in-progress, done, snoozed)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const searchEmailsSemantic = async (query, page = 1, limit = 20, filters = {}) => {
+export const searchEmailsSemantic = async (
+  query,
+  page = 1,
+  limit = 20,
+  filters = {}
+) => {
   try {
     if (!query || !query.trim()) {
-      return { success: false, error: 'Query is required' };
+      return { success: false, error: "Query is required" };
     }
 
     const requestBody = {
       query: query.trim(),
       page,
       limit,
-      ...(filters.unreadOnly !== undefined && { unreadOnly: filters.unreadOnly }),
+      ...(filters.unreadOnly !== undefined && {
+        unreadOnly: filters.unreadOnly,
+      }),
       ...(filters.sender && { sender: filters.sender }),
       ...(filters.status && { status: filters.status }),
     };
 
     return await apiCall(API_ENDPOINTS.SEARCH.SEMANTIC, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(requestBody),
     });
   } catch (error) {
@@ -384,7 +382,12 @@ export const getEmailStatus = async (emailId) => {
  * @param {string|null} oldGmailLabelId - Previous Gmail label ID to remove (optional)
  * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
  */
-export const updateEmailStatus = async (emailId, status, gmailLabelId = null, oldGmailLabelId = null) => {
+export const updateEmailStatus = async (
+  emailId,
+  status,
+  gmailLabelId = null,
+  oldGmailLabelId = null
+) => {
   try {
     const body = { status };
     if (gmailLabelId) {
@@ -393,19 +396,13 @@ export const updateEmailStatus = async (emailId, status, gmailLabelId = null, ol
     if (oldGmailLabelId) {
       body.oldGmailLabelId = oldGmailLabelId;
     }
-    console.log(`[updateEmailStatus] Calling API:`, {
-      endpoint: API_ENDPOINTS.EMAILS.STATUS(emailId),
-      method: 'PUT',
-      body
-    });
     const result = await apiCall(API_ENDPOINTS.EMAILS.STATUS(emailId), {
       method: "PUT",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
     });
-    console.log(`[updateEmailStatus] API result:`, result);
     return result;
   } catch (error) {
     console.error("Error updating email status:", error);
