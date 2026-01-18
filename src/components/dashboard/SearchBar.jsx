@@ -38,6 +38,8 @@ function SearchBar({
 
   // Close suggestions when clicking outside
   useEffect(() => {
+    if (!showSuggestions) return
+
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setShowSuggestions(false)
@@ -45,11 +47,10 @@ function SearchBar({
       }
     }
 
-    if (showSuggestions) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside)
-      }
+    // Use capture phase for better performance
+    document.addEventListener('mousedown', handleClickOutside, true)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true)
     }
   }, [showSuggestions])
 
@@ -169,7 +170,7 @@ function SearchBar({
                 aria-label="Search emails"
                 aria-expanded={showSuggestions}
                 aria-haspopup="listbox"
-                className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background/80 backdrop-blur-sm transition-all duration-300 focus:bg-background focus:shadow-md focus:shadow-primary/20"
+                className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-background/95 transition-colors duration-200 focus:bg-background focus:shadow-md focus:shadow-primary/20"
               />
               <SearchSuggestions
                 suggestions={suggestions}
@@ -183,7 +184,7 @@ function SearchBar({
             <button
               onClick={handleSearchButtonClick}
               disabled={loading || !searchQuery.trim()}
-              className="px-4 py-2.5 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-lg hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover-glow"
+              className="px-4 py-2.5 bg-gradient-to-r from-primary to-secondary text-primary-foreground rounded-lg hover:from-primary/90 hover:to-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 active:scale-95 flex items-center gap-2 shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30"
               title="Search"
             >
               <Search size={16} />

@@ -27,7 +27,7 @@ export default function KanbanToolbar({
   }
 
   return (
-    <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md shadow-sm">
+    <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 shadow-sm">
       <div className="px-4 py-3 flex items-center justify-between gap-4">
         {/* Left side - Sorting controls */}
         <div className="flex items-center gap-2">

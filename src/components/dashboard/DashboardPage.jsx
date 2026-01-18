@@ -1,11 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { LayoutGrid, List } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { LayoutGrid, List, Loader2 } from 'lucide-react'
 import Sidebar from './Sidebar'
 import MailList from './MailList'
 import MailViewer from './MailViewer'
-import KanbanBoard from './KanbanBoard'
-import ComposeModal from './ComposeModal'
-import SettingsPage from './SettingsPage'
 import SearchBar from './SearchBar'
 import SummaryNotification from '../ui/SummaryNotification'
 import SearchResultsView from './SearchResultsView'
@@ -16,6 +13,11 @@ import { useKanbanStatus } from '../../hooks/use-kanban-status'
 import { Alert, AlertDescription } from '../ui/alert'
 import { useToast } from '../../hooks/use-toast'
 import { emailApi } from '../../lib/api'
+
+// Lazy load heavy components
+const KanbanBoard = lazy(() => import('./KanbanBoard'))
+const ComposeModal = lazy(() => import('./ComposeModal'))
+const SettingsPage = lazy(() => import('./SettingsPage'))
 
 const VIEW_MODE_STORAGE_KEY = 'email_view_mode'
 
@@ -183,7 +185,8 @@ export default function DashboardPage({ user, onLogout }) {
     const interval = setInterval(checkExpiredSnoozes, 30000)
 
     return () => clearInterval(interval)
-  }, [selectedFolder, pagination, searchQuery, currentPageToken, fetchEmails, setEmails])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFolder, pagination?.page, searchQuery, currentPageToken]) // fetchEmails and setEmails are stable
 
   // Get unread counts from mailboxes
   const unreadCounts = useMemo(() => getUnreadCounts(), [mailboxes])
@@ -634,9 +637,9 @@ export default function DashboardPage({ user, onLogout }) {
     <div className="flex h-screen bg-background overflow-hidden max-md:flex-col">
       {/* Error alerts */}
       {(emailError || mailboxError) && (
-        <div className="absolute top-4 right-4 z-50 max-w-md animate-in slide-in-from-top-5">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-50 max-w-[calc(100%-1rem)] sm:max-w-md animate-in slide-in-from-top-5">
           <Alert variant="destructive" className="shadow-lg">
-            <AlertDescription className="font-medium">
+            <AlertDescription className="font-medium text-sm">
               {emailError || mailboxError}
             </AlertDescription>
           </Alert>
@@ -667,17 +670,17 @@ export default function DashboardPage({ user, onLogout }) {
       
       <div className="flex-1 flex flex-col overflow-hidden max-md:min-h-0">
         {/* Header with View Toggle and Search Bar */}
-        <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md shadow-lg">
-          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-14 sm:h-16">
+        <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 shadow-md">
+          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-12 sm:h-14 md:h-16">
             {/* View Toggle Button */}
             <Button
               variant={viewMode === 'traditional' ? 'default' : 'outline'}
               size="sm"
               onClick={handleToggleViewMode}
-              className={`gap-2 flex-shrink-0 transition-all duration-300 ${
+              className={`gap-1 sm:gap-2 flex-shrink-0 transition-colors duration-200 min-h-[36px] sm:min-h-[40px] ${
                 viewMode === 'traditional' 
-                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40' 
-                  : 'hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40'
+                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-md shadow-primary/20' 
+                  : 'hover:bg-muted/60'
               }`}
               title={viewMode === 'traditional' ? 'Switch to Kanban view' : 'Switch to List view'}
             >
@@ -712,9 +715,10 @@ export default function DashboardPage({ user, onLogout }) {
                 variant="outline"
                 size="sm"
                 onClick={handleClearSearch}
-                className="flex-shrink-0 transition-all duration-200"
+                className="flex-shrink-0 transition-colors duration-200 min-h-[36px] sm:min-h-[40px]"
               >
-                Clear
+                <span className="hidden xs:inline">Clear</span>
+                <span className="xs:hidden">✕</span>
               </Button>
             )}
           </div>
@@ -722,16 +726,25 @@ export default function DashboardPage({ user, onLogout }) {
         
         {/* Mail content area */}
         {viewMode === 'kanban' && !isSearchMode ? (
-          <div className="flex-1 flex overflow-hidden">
-            <KanbanBoard
-              emails={filteredEmails}
-              selectedEmail={selectedEmail}
-              onSelectEmail={handleSelectEmail}
-              loading={emailLoading}
-              user={user}
-              onRefresh={() => fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)}
-              onEmailMoved={handleEmailMoved}
-            />
+          <div className="flex-1 flex overflow-hidden max-md:flex-col">
+            <Suspense fallback={
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 size={32} className="animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Loading Kanban board...</p>
+                </div>
+              </div>
+            }>
+              <KanbanBoard
+                emails={filteredEmails}
+                selectedEmail={selectedEmail}
+                onSelectEmail={handleSelectEmail}
+                loading={emailLoading}
+                user={user}
+                onRefresh={() => fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)}
+                onEmailMoved={handleEmailMoved}
+              />
+            </Suspense>
             
             {selectedEmail && (
               <MailViewer
@@ -746,7 +759,7 @@ export default function DashboardPage({ user, onLogout }) {
             )}
           </div>
         ) : isSearchMode ? (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden max-md:flex-col">
             <SearchResultsView
               emails={emails}
               loading={emailLoading}
@@ -775,7 +788,7 @@ export default function DashboardPage({ user, onLogout }) {
             )}
           </div>
         ) : (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden max-md:flex-col">
             <MailList
               emails={filteredEmails}
               selectedEmail={selectedEmail}
@@ -808,18 +821,30 @@ export default function DashboardPage({ user, onLogout }) {
       </div>
 
       {showCompose && (
-        <ComposeModal
-          user={user}
-          onSend={handleSendEmail}
-          onClose={() => setShowCompose(false)}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <Loader2 size={32} className="animate-spin text-primary" />
+          </div>
+        }>
+          <ComposeModal
+            user={user}
+            onSend={handleSendEmail}
+            onClose={() => setShowCompose(false)}
+          />
+        </Suspense>
       )}
 
       {showSettings && (
-        <SettingsPage
-          user={user}
-          onClose={() => setShowSettings(false)}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+            <Loader2 size={32} className="animate-spin text-primary" />
+          </div>
+        }>
+          <SettingsPage
+            user={user}
+            onClose={() => setShowSettings(false)}
+          />
+        </Suspense>
       )}
     </div>
   )

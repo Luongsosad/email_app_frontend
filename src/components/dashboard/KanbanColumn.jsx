@@ -23,19 +23,19 @@ export default function KanbanColumn({
     <div 
       ref={setNodeRef}
       className={cn(
-        'flex flex-col h-full min-w-[300px] max-w-[350px] bg-gradient-to-b from-muted/40 to-muted/20 rounded-xl border border-border transition-all duration-300 shadow-md',
-        isOver && 'bg-gradient-to-b from-primary/15 to-primary/5 border-primary/60 shadow-lg shadow-primary/20 scale-[1.02]'
+        'flex flex-col h-full min-w-[250px] sm:min-w-[280px] md:min-w-[300px] max-w-[350px] bg-gradient-to-b from-muted/40 to-muted/20 rounded-xl border border-border transition-colors duration-200 shadow-md flex-shrink-0',
+        isOver && 'bg-primary/15 border-primary/60 shadow-lg shadow-primary/20'
       )}
     >
       {/* Column Header */}
-      <div className="p-4 border-b border-border bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm rounded-t-xl">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-foreground">{title}</h3>
+      <div className="p-3 sm:p-4 border-b border-border bg-gradient-to-r from-card/80 to-card/60 rounded-t-xl">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold text-foreground text-sm sm:text-base truncate">{title}</h3>
           <span className={cn(
-            'text-sm font-bold px-2.5 py-1 rounded-full transition-all duration-200',
+            'text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-1 rounded-full transition-colors duration-150 flex-shrink-0',
             isOver 
-              ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30'
-              : 'text-muted-foreground bg-gradient-to-r from-muted to-muted/80'
+              ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground bg-muted/80'
           )}>
             {emails.length}
           </span>
@@ -43,18 +43,18 @@ export default function KanbanColumn({
       </div>
 
       {/* Column Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 sm:space-y-3">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 size={24} className="animate-spin text-muted-foreground" />
           </div>
         ) : emails.length === 0 ? (
           <div className={cn(
-            'flex items-center justify-center py-8 text-center rounded-lg border-2 border-dashed transition-all duration-300',
-            isOver ? 'border-primary/60 bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/10' : 'border-border/50'
+            'flex items-center justify-center py-8 text-center rounded-lg border-2 border-dashed transition-colors duration-200',
+            isOver ? 'border-primary/60 bg-primary/10 shadow-sm' : 'border-border/50'
           )}>
             <p className={cn(
-              'text-sm transition-colors',
+              'text-xs sm:text-sm transition-colors',
               isOver ? 'text-primary font-medium' : 'text-muted-foreground'
             )}>
               {isOver ? 'Drop email here' : 'No emails'}
@@ -77,4 +77,6 @@ export default function KanbanColumn({
     </div>
   )
 }
+
+export default memo(KanbanColumn)
 

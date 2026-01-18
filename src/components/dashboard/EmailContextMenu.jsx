@@ -29,7 +29,7 @@ function EmailContextMenu({
       
       {/* Context Menu */}
       <div
-        className="fixed z-50 bg-card/95 backdrop-blur-md border border-border rounded-xl shadow-2xl shadow-primary/10 py-1.5 min-w-[200px] animate-in fade-in-0 slide-in-from-top-2"
+        className="fixed z-50 bg-card/98 border border-border rounded-xl shadow-xl shadow-primary/10 py-1.5 min-w-[200px] animate-in fade-in-0 slide-in-from-top-2"
         style={{
           left: `${position.x}px`,
           top: `${position.y}px`,
