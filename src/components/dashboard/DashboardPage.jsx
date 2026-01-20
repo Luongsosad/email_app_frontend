@@ -464,40 +464,24 @@ export default function DashboardPage({ user, onLogout }) {
     }
   }, [archiveEmail, selectedFolder, pagination, searchQuery, currentPageToken, fetchEmails, toast])
 
+  // SnoozeModal handles the API call, this callback updates the local state
   const handleSnooze = useCallback(async (emailId, snoozeUntil) => {
-    try {
-      const result = await emailApi.snoozeEmail(emailId, snoozeUntil)
+    toast({
+      title: 'Email snoozed',
+      description: `Email will reappear on ${new Date(snoozeUntil).toLocaleDateString()}`,
+    })
+    
+    // Close the email viewer
+    setSelectedEmail(null)
 
-      if (result?.success) {
-        toast({
-          title: 'Email snoozed',
-          description: `Email will reappear on ${new Date(snoozeUntil).toLocaleDateString()}`,
-        })
-        // Close the email viewer
-        setSelectedEmail(null)
-
-        // Update local state immediately by adding snoozedUntil to the email
-        setEmails(prevEmails =>
-          prevEmails.map(email =>
-            email.id === emailId
-              ? { ...email, snoozedUntil: snoozeUntil }
-              : email
-          )
-        )
-      } else {
-        toast({
-          title: 'Error',
-          description: result?.error || 'Failed to snooze email',
-          variant: 'destructive',
-        })
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to snooze email',
-        variant: 'destructive',
-      })
-    }
+    // Update local state immediately by adding snoozedUntil to the email
+    setEmails(prevEmails =>
+      prevEmails.map(email =>
+        email.id === emailId
+          ? { ...email, snoozedUntil: snoozeUntil }
+          : email
+      )
+    )
   }, [toast, setEmails])
 
   const handleMarkAsRead = useCallback(async (emailId) => {
@@ -777,7 +761,10 @@ export default function DashboardPage({ user, onLogout }) {
                 onSpam={handleMoveToSpam}
                 onDelete={handleDelete}
                 onArchive={handleArchive}
+                onSnooze={handleSnooze}
                 loading={emailDetailLoading}
+                onSummaryStart={handleSummaryStart}
+                onSummaryComplete={handleSummaryComplete}
               />
             )}
           </div>
