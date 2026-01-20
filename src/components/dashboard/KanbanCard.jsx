@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Star, Paperclip, GripVertical, Sparkles } from 'lucide-react'
@@ -6,7 +7,7 @@ import { cn } from '@/lib/utils/utils'
 import { useState, useEffect } from 'react'
 import { emailApi } from '@/lib/api'
 
-export default function KanbanCard({ 
+function KanbanCard({ 
   email, 
   columnId,
   isSelected = false,
@@ -173,4 +174,6 @@ export default function KanbanCard({
     </div>
   )
 }
+
+export default memo(KanbanCard)
 

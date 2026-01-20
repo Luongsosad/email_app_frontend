@@ -54,3 +54,30 @@ export const downloadAttachment = async (messageId, attachmentId, filename) => {
 export const getAttachmentUrl = (messageId, attachmentId) => {
   return `${API_BASE_URL}/attachments/${messageId}/${attachmentId}`
 }
+
+/**
+ * Fetch attachment as blob for preview
+ * @param {string} messageId - The message ID
+ * @param {string} attachmentId - The attachment ID
+ * @returns {Promise<Blob>} - The attachment blob
+ */
+export const fetchAttachmentBlob = async (messageId, attachmentId) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/attachments/${messageId}/${attachmentId}`,
+      {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch attachment')
+    }
+
+    return await response.blob()
+  } catch (error) {
+    console.error('Error fetching attachment blob:', error)
+    throw error
+  }
+}

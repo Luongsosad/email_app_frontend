@@ -42,8 +42,8 @@ export default function KanbanBoard({
       }
     }
     
+    // Use passive listeners where possible
     window.addEventListener('storage', handleStorageChange)
-    // Also listen to custom event for same-tab updates
     window.addEventListener('kanbanColumnsUpdated', handleColumnsUpdate)
     
     return () => {
@@ -210,8 +210,8 @@ export default function KanbanBoard({
       <div className="flex-1 flex flex-col overflow-hidden bg-background relative">
         {/* Loading overlay when syncing statuses - centered and larger */}
         {(loading || isSyncing) && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md animate-in fade-in-0">
-            <div className="flex flex-col items-center gap-4 bg-card/90 backdrop-blur-xl border border-border rounded-2xl px-8 py-6 shadow-2xl shadow-primary/20">
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95 animate-in fade-in-0">
+            <div className="flex flex-col items-center gap-4 bg-card/95 border border-border rounded-2xl px-8 py-6 shadow-xl shadow-primary/20">
               <Loader2 size={36} className="animate-spin text-primary" />
               <span className="text-base font-semibold text-foreground">
                 {loading ? 'Loading emails...' : 'Syncing statuses...'}
@@ -232,23 +232,18 @@ export default function KanbanBoard({
 
         {/* Kanban Board Container */}
         {columnsLoaded && (
-          <div className="flex-1 overflow-x-auto overflow-y-hidden p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-            <div className="flex gap-4 h-full min-w-max">
-              {dynamicColumns.map((column, index) => (
-                <div
+          <div className="flex-1 overflow-x-auto overflow-y-hidden p-2 sm:p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent touch-pan-x">
+            <div className="flex gap-2 sm:gap-4 h-full min-w-max">
+              {dynamicColumns.map((column) => (
+                <KanbanColumn
                   key={column.id}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  className="animate-in fade-in-0 slide-in-from-left-4"
-                >
-                  <KanbanColumn
-                    columnId={column.id}
-                    title={column.title}
-                    emails={emailsByColumn[column.id] || []}
-                    selectedEmail={selectedEmail}
-                    onCardClick={onSelectEmail}
-                    loading={loading && !isLoaded}
-                  />
-                </div>
+                  columnId={column.id}
+                  title={column.title}
+                  emails={emailsByColumn[column.id] || []}
+                  selectedEmail={selectedEmail}
+                  onCardClick={onSelectEmail}
+                  loading={loading && !isLoaded}
+                />
               ))}
             </div>
           </div>

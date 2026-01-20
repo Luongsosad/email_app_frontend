@@ -71,22 +71,22 @@ export default function Sidebar({
   const folders = getFolderData()
 
   return (
-    <div className="w-64 max-md:w-full max-md:h-auto max-md:border-r-0 max-md:border-b bg-card border-r border-border flex flex-col overflow-hidden shadow-lg">
+    <div className="w-64 md:w-64 max-md:w-full max-md:h-auto max-md:border-r-0 max-md:border-b bg-card border-r border-border flex flex-col overflow-hidden shadow-lg">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-110 hover:shadow-xl hover:shadow-primary/40">
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-primary/20 md:transition-transform md:duration-200 md:hover:scale-105">
             <span className="text-xl text-primary-foreground font-bold">📧</span>
           </div>
-          <span className="text-xl font-bold text-gradient tracking-tight">MailBox</span>
+          <span className="text-lg sm:text-xl font-bold text-gradient tracking-tight">MailBox</span>
         </div>
       </div>
 
       {/* Compose Button */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-3 sm:px-4 pt-3 sm:pt-4 pb-2">
         <button
           onClick={onCompose}
-          className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-2.5 rounded-xl font-semibold hover:from-primary/90 hover:to-secondary/90 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover-glow"
+          className="w-full bg-gradient-to-r from-primary to-secondary text-primary-foreground py-3 sm:py-2.5 rounded-xl font-semibold hover:from-primary/90 hover:to-secondary/90 active:scale-[0.98] transition-colors duration-200 flex items-center justify-center gap-2 shadow-md shadow-primary/20 min-h-[44px] touch-manipulation"
         >
           <span className="text-base">✏️</span>
           <span>Compose</span>
@@ -94,7 +94,7 @@ export default function Sidebar({
       </div>
 
       {/* Folders */}
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+      <nav className="flex-1 overflow-y-auto px-2 sm:px-3 py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
@@ -119,19 +119,19 @@ export default function Sidebar({
                 onClick={() => onFolderSelect(folder.key)}
                 aria-label={`Select ${folder.label} folder`}
                 aria-current={isSelected ? 'page' : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-300 ${
+                className={`w-full flex items-center gap-2 sm:gap-3 px-3 py-3 sm:py-2.5 rounded-lg transition-colors duration-200 min-h-[44px] touch-manipulation ${
                   isSelected
-                    ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold shadow-md shadow-primary/20 border-l-4 border-primary'
-                    : 'text-muted-foreground hover:bg-gradient-to-r hover:from-muted/50 hover:to-muted/30 hover:text-foreground hover:shadow-sm'
+                    ? 'bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold shadow-sm shadow-primary/10 border-l-4 border-primary'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground active:bg-muted/70'
                 }`}
               >
-                <Icon size={18} className={isSelected ? 'text-primary' : ''} />
-                <span className="flex-1 text-left text-sm">{folder.label}</span>
+                <Icon size={18} className={isSelected ? 'text-primary flex-shrink-0' : 'flex-shrink-0'} />
+                <span className="flex-1 text-left text-sm truncate">{folder.label}</span>
                 {count > 0 && (
-                  <span className={`text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center transition-all duration-200 ${
+                  <span className={`text-xs font-bold rounded-full px-2 py-0.5 min-w-[20px] text-center transition-colors duration-150 flex-shrink-0 ${
                     isSelected 
-                      ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-md shadow-primary/30' 
-                      : 'bg-gradient-to-r from-muted-foreground/20 to-muted-foreground/10 text-muted-foreground'
+                      ? 'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-sm' 
+                      : 'bg-muted-foreground/20 text-muted-foreground'
                   }`}>
                     {count > 99 ? '99+' : count}
                   </span>
@@ -143,25 +143,25 @@ export default function Sidebar({
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-border bg-gradient-to-t from-muted/40 to-muted/20 backdrop-blur-sm px-4 py-3 space-y-1.5">
-        <div className="px-2 py-2 rounded-lg bg-background/60 backdrop-blur-sm border border-border/50 shadow-sm">
+      <div className="border-t border-border bg-gradient-to-t from-muted/40 to-muted/20 px-3 sm:px-4 py-3 space-y-1.5">
+        <div className="px-2 py-2 rounded-lg bg-background/80 border border-border/50 shadow-sm">
           <p className="text-xs text-muted-foreground mb-0.5">Signed in as</p>
           <p className="text-sm font-medium text-foreground truncate">{user?.email || 'Unknown'}</p>
         </div>
         
         <button
           onClick={onSettings}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-muted/60 hover:to-muted/40 transition-all duration-300 active:scale-[0.98] hover:shadow-sm"
+          className="w-full flex items-center gap-3 px-3 py-3 sm:py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors duration-200 active:bg-muted/80 min-h-[44px] touch-manipulation"
         >
-          <Settings size={18} />
+          <Settings size={18} className="flex-shrink-0" />
           <span className="text-sm">Settings</span>
         </button>
 
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-gradient-to-r hover:from-destructive/10 hover:to-destructive/5 transition-all duration-300 active:scale-[0.98] hover:shadow-sm"
+          className="w-full flex items-center gap-3 px-3 py-3 sm:py-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors duration-200 active:bg-destructive/20 min-h-[44px] touch-manipulation"
         >
-          <LogOut size={18} />
+          <LogOut size={18} className="flex-shrink-0" />
           <span className="text-sm">Sign Out</span>
         </button>
       </div>

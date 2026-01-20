@@ -32,6 +32,12 @@ export const API_ENDPOINTS = {
     STATUS: (id) => `/emails/${id}/status`,
     BULK_STATUS: '/emails/bulk-status',
   },
+  // Kanban endpoints
+  KANBAN: {
+    COLUMNS: '/kanban/columns',
+    COLUMN: (id) => `/kanban/columns/${id}`,
+    REORDER: '/kanban/columns/reorder',
+  },
   // Search endpoints
   SEARCH: {
     SEMANTIC: '/search/semantic',

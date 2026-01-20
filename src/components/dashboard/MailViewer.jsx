@@ -1,14 +1,15 @@
-import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2, Clock, Sparkles, Paperclip } from 'lucide-react'
-import { formatDate, formatFileSize } from '@/lib/utils/utils'
-import { useState, useMemo, useEffect } from 'react'
+import { memo, useState, useMemo, useEffect } from 'react'
+import { X, Star, Trash2, AlertCircle, Archive, Reply, Forward, Download, Loader2, Clock, Sparkles, Paperclip, ExternalLink, Eye } from 'lucide-react'
+import { formatDate, formatFileSize, detectFileType } from '@/lib/utils/utils'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ReplyModal from '@/components/dashboard/ReplyModal'
 import ForwardModal from '@/components/dashboard/ForwardModal'
 import SnoozeModal from '@/components/dashboard/SnoozeModal'
+import AttachmentPreviewModal from '@/components/dashboard/AttachmentPreviewModal'
 import { attachmentApi, emailApi } from '@/lib/api'
 import DOMPurify from 'dompurify'
 
-export default function MailViewer({
+function MailViewer({
   email,
   onBack,
   onStar,
@@ -29,6 +30,7 @@ export default function MailViewer({
   const [downloadingAttachments, setDownloadingAttachments] = useState(new Set())
   const [summary, setSummary] = useState(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
+  const [previewAttachment, setPreviewAttachment] = useState(null)
 
   // Fetch existing summary when email changes
   useEffect(() => {
@@ -47,35 +49,42 @@ export default function MailViewer({
         }
       }
     }
-    
+
     fetchSummary()
   }, [email?.id])
 
+  const handleOpenInGmail = () => {
+    if (!email?.id) return
+
+    const gmailUrl = `https://mail.google.com/mail/u/1/#inbox/${email.id}`
+    window.open(gmailUrl, '_blank', 'noopener,noreferrer')
+  }
+
   const handleGenerateSummary = async () => {
     if (!email?.id) return
-    
+
     setLoadingSummary(true)
-    
+
     // Notify parent that summary generation started
     if (onSummaryStart) {
       onSummaryStart(email.id, email.subject)
     }
-    
+
     try {
       // Force regenerate if summary already exists
       const force = summary !== null
       const response = await emailApi.summarizeEmail(email.id, force)
       if (response.success && response.data?.summary) {
         setSummary(response.data.summary)
-        
+
         // Notify parent that summary is complete with the new summary
         if (onSummaryComplete) {
           onSummaryComplete(email.id, response.data.summary)
         }
-        
+
         // Trigger a custom event for KanbanCards to refresh
-        window.dispatchEvent(new CustomEvent('emailSummaryUpdated', { 
-          detail: { emailId: email.id, summary: response.data.summary } 
+        window.dispatchEvent(new CustomEvent('emailSummaryUpdated', {
+          detail: { emailId: email.id, summary: response.data.summary }
         }))
       } else {
         alert('Failed to generate summary. Please try again.')
@@ -150,7 +159,7 @@ export default function MailViewer({
   // Sanitize HTML content
   const sanitizedBody = useMemo(() => {
     if (!email.body) return ''
-    
+
     // Configure DOMPurify to allow most HTML but remove dangerous elements
     const config = {
       ALLOWED_TAGS: [
@@ -167,32 +176,32 @@ export default function MailViewer({
       ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
       ADD_ATTR: ['target'], // Allow opening links in new tab
     }
-    
+
     return DOMPurify.sanitize(email.body, config)
   }, [email.body])
 
   return (
-    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l max-md:border-l-0 max-md:border-t border-border shadow-lg">
+    <div className="flex-1 flex flex-col bg-background overflow-hidden border-l max-md:border-l-0 max-md:border-t max-md:w-full border-border shadow-lg">
       {/* Header */}
-      <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 backdrop-blur-md p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+      <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 p-2 sm:p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <button
           onClick={onBack}
           aria-label="Close email viewer"
-          className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+          className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:bg-muted/80 min-w-[44px] min-h-[44px] flex items-center justify-center touch-manipulation"
           title="Back"
         >
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-none">
           <button
             onClick={() => onStar(email.id, email.isStarred)}
-            className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
-              email.isStarred 
-                ? 'text-primary bg-primary/10' 
-                : 'text-muted-foreground hover:text-primary hover:bg-muted'
-            }`}
+            className={`p-2 rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation ${email.isStarred
+              ? 'text-primary bg-primary/10'
+              : 'text-muted-foreground hover:text-primary hover:bg-muted'
+              }`}
             title={email.isStarred ? 'Remove star' : 'Add star'}
+            aria-label={email.isStarred ? 'Remove star' : 'Add star'}
           >
             <Star
               size={18}
@@ -202,24 +211,27 @@ export default function MailViewer({
 
           <button
             onClick={() => setShowReply(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation hidden sm:flex"
             title="Reply"
+            aria-label="Reply"
           >
             <Reply size={18} />
           </button>
 
           <button
             onClick={() => setShowForward(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation hidden sm:flex"
             title="Forward"
+            aria-label="Forward"
           >
             <Forward size={18} />
           </button>
 
           <button
             onClick={() => setShowSnooze(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
             title="Snooze"
+            aria-label="Snooze"
           >
             <Clock size={18} />
           </button>
@@ -227,18 +239,18 @@ export default function MailViewer({
           <button
             onClick={handleGenerateSummary}
             disabled={loadingSummary}
-            className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
-              summary 
-                ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20' 
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-            } ${loadingSummary ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`p-2 rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation ${summary
+              ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              } ${loadingSummary ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={
-              loadingSummary 
-                ? 'AI đang tạo tóm tắt...' 
-                : summary 
-                  ? 'Tạo lại tóm tắt với AI' 
+              loadingSummary
+                ? 'AI đang tạo tóm tắt...'
+                : summary
+                  ? 'Tạo lại tóm tắt với AI'
                   : 'Tạo tóm tắt với AI'
             }
+            aria-label="Generate summary"
           >
             {loadingSummary ? (
               <Loader2 size={18} className="animate-spin" />
@@ -247,26 +259,40 @@ export default function MailViewer({
             )}
           </button>
 
+          {email?.id && (
+            <button
+              onClick={handleOpenInGmail}
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
+              title="Open in Gmail"
+              aria-label="Open in Gmail"
+            >
+              <ExternalLink size={18} />
+            </button>
+          )}
+
           <button
             onClick={() => setShowConfirmArchive(true)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
             title="Archive"
+            aria-label="Archive"
           >
             <Archive size={18} />
           </button>
 
           <button
             onClick={() => setShowConfirmSpam(true)}
-            className="p-2 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
             title="Spam"
+            aria-label="Mark as spam"
           >
             <AlertCircle size={18} />
           </button>
 
           <button
             onClick={() => setShowConfirmDelete(true)}
-            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all duration-200 active:scale-95"
+            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
             title="Delete"
+            aria-label="Delete"
           >
             <Trash2 size={18} />
           </button>
@@ -284,14 +310,14 @@ export default function MailViewer({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-          <div className="p-6 lg:p-8 max-w-4xl mx-auto">
+          <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
             {/* Subject */}
             <h1 className="text-2xl lg:text-3xl font-bold mb-6 text-foreground leading-tight">
               {email.subject || '(No Subject)'}
             </h1>
 
             {/* From/To Info */}
-            <div className="bg-gradient-to-br from-muted/50 via-muted/30 to-muted/20 border border-border rounded-xl p-5 mb-6 shadow-lg backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-muted/50 via-muted/30 to-muted/20 border border-border rounded-xl p-5 mb-6 shadow-md">
               <div className="flex items-start gap-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/30">
                   <span className="text-xl font-bold text-primary-foreground">
@@ -326,6 +352,46 @@ export default function MailViewer({
               </div>
             )}
 
+            {/* Gmail Labels */}
+            {email.labelIds && email.labelIds.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground mr-1">Labels:</span>
+                {email.labelIds
+                  .filter(label => !['UNREAD', 'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_FORUMS'].includes(label))
+                  .map((label) => {
+                    // Format label name for display
+                    const displayName = label
+                      .replace('Label_', '')
+                      .replace(/_/g, ' ')
+                      .replace(/^INBOX$/i, 'Inbox')
+                      .replace(/^SENT$/i, 'Sent')
+                      .replace(/^DRAFT$/i, 'Draft')
+                      .replace(/^TRASH$/i, 'Trash')
+                      .replace(/^SPAM$/i, 'Spam')
+                      .replace(/^STARRED$/i, '⭐ Starred')
+                      .replace(/^IMPORTANT$/i, '❗ Important')
+
+                    // Determine badge color based on label type
+                    let badgeClass = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    if (label === 'INBOX') badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                    else if (label === 'STARRED') badgeClass = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                    else if (label === 'IMPORTANT') badgeClass = 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                    else if (label === 'SENT') badgeClass = 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                    else if (label === 'DRAFT') badgeClass = 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
+                    else if (label.startsWith('Label_')) badgeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+
+                    return (
+                      <span
+                        key={label}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${badgeClass}`}
+                      >
+                        {displayName}
+                      </span>
+                    )
+                  })}
+              </div>
+            )}
+
             {/* Summary */}
             {/* Don't show inline loading if using global notification */}
             {loadingSummary && !summary && !onSummaryStart && (
@@ -348,7 +414,7 @@ export default function MailViewer({
                 </div>
               </div>
             )}
-            
+
             {summary && (
               <div className="mb-6 bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-100/95 dark:from-amber-950/30 dark:via-orange-950/20 dark:to-amber-900/20 border-2 border-amber-200/60 dark:border-amber-800/60 rounded-2xl p-5 shadow-lg shadow-amber-500/10 backdrop-blur-sm">
                 <div className="flex items-start gap-3">
@@ -372,8 +438,8 @@ export default function MailViewer({
             )}
 
             {/* Body */}
-            <div className="mb-8 border border-border rounded-xl p-6 bg-gradient-to-br from-card via-card to-muted/20 shadow-lg backdrop-blur-sm">
-              <div 
+            <div className="mb-8 border border-border rounded-xl p-6 bg-gradient-to-br from-card via-card to-muted/20 shadow-md">
+              <div
                 className="email-content text-foreground prose prose-sm max-w-none dark:prose-invert"
                 style={{ lineHeight: '1.7' }}
                 dangerouslySetInnerHTML={{ __html: sanitizedBody }}
@@ -388,29 +454,52 @@ export default function MailViewer({
                   Attachments ({email.attachments.length})
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
-                  {email.attachments.map(attachment => (
-                    <button
-                      key={attachment.id}
-                      onClick={() => handleDownloadAttachment(attachment)}
-                      disabled={downloadingAttachments.has(attachment.id)}
-                      className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-muted/60 to-muted/40 hover:from-muted/80 hover:to-muted/60 border border-border rounded-lg transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
-                    >
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 border border-primary/30 shadow-sm">
-                        <span className="text-xs font-bold text-primary">
-                          {attachment.name.split('.').pop()?.toUpperCase().substring(0, 3) || 'FILE'}
-                        </span>
+                  {email.attachments.map(attachment => {
+                    const fileType = detectFileType(attachment.name, attachment.type)
+                    const canPreview = fileType.canPreview
+
+                    return (
+                      <div
+                        key={attachment.id}
+                        className="w-full flex items-center gap-4 p-4 bg-gradient-to-r from-muted/60 to-muted/40 hover:from-muted/80 hover:to-muted/60 border border-border rounded-lg transition-colors duration-200"
+                      >
+                        <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0 border border-primary/30 shadow-sm">
+                          <span className="text-xs font-bold text-primary">
+                            {attachment.name.split('.').pop()?.toUpperCase().substring(0, 3) || 'FILE'}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className="text-sm font-medium text-foreground truncate mb-0.5">{attachment.name}</p>
+                          <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {canPreview && (
+                            <button
+                              onClick={() => setPreviewAttachment(attachment)}
+                              className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation"
+                              title="Preview"
+                              aria-label="Preview attachment"
+                            >
+                              <Eye size={18} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDownloadAttachment(attachment)}
+                            disabled={downloadingAttachments.has(attachment.id)}
+                            className="p-2 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors duration-150 active:scale-95 min-w-[36px] min-h-[36px] flex items-center justify-center touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Download"
+                            aria-label="Download attachment"
+                          >
+                            {downloadingAttachments.has(attachment.id) ? (
+                              <Loader2 size={18} className="animate-spin text-primary" />
+                            ) : (
+                              <Download size={18} />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-medium text-foreground truncate mb-0.5">{attachment.name}</p>
-                        <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
-                      </div>
-                      {downloadingAttachments.has(attachment.id) ? (
-                        <Loader2 size={20} className="animate-spin text-primary flex-shrink-0" />
-                      ) : (
-                        <Download size={20} className="text-muted-foreground flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -485,6 +574,19 @@ export default function MailViewer({
           }}
         />
       )}
+
+      {/* Attachment Preview Modal */}
+      {previewAttachment && (
+        <AttachmentPreviewModal
+          isOpen={!!previewAttachment}
+          onClose={() => setPreviewAttachment(null)}
+          attachment={previewAttachment}
+          messageId={email.id}
+          onDownload={handleDownloadAttachment}
+        />
+      )}
     </div>
   )
 }
+
+export default memo(MailViewer)

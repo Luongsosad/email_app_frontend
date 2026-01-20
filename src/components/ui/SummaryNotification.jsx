@@ -72,8 +72,8 @@ export default function SummaryNotification({
         className={`
           bg-gradient-to-br from-amber-50/95 via-orange-50/95 to-amber-100/95 dark:from-amber-950/95 dark:via-orange-950/95 dark:to-amber-900/95
           border-2 border-amber-300/60 dark:border-amber-700/60
-          rounded-2xl shadow-2xl shadow-amber-500/20 p-4 pr-12 max-w-sm backdrop-blur-md
-          ${!isLoading && onClick ? 'cursor-pointer hover:shadow-2xl hover:shadow-amber-500/30 hover:scale-105 hover:border-amber-400 dark:hover:border-amber-600' : ''}
+          rounded-2xl shadow-xl shadow-amber-500/20 p-4 pr-12 max-w-sm
+          ${!isLoading && onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-amber-500/30 hover:scale-105 hover:border-amber-400 dark:hover:border-amber-600' : ''}
           transition-all duration-300
         `}
       >

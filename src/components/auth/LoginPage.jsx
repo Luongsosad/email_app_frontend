@@ -83,16 +83,16 @@ export default function LoginPage({ onLoginSuccess }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-secondary/10 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Simplified background elements - reduced animation for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary/8 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-secondary/8 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 duration-500 relative z-10">
-        <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl p-8 border border-border/50">
+      <div className="w-full max-w-md animate-in fade-in-0 slide-in-from-bottom-4 relative z-10">
+        <div className="bg-card/90 rounded-2xl shadow-xl p-6 sm:p-8 border border-border/50">
           <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/40 transition-all duration-300 hover:scale-110 hover:shadow-primary/60">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 md:transition-transform md:duration-200 md:hover:scale-105">
               <span className="text-2xl text-primary-foreground font-bold">📧</span>
             </div>
           </div>

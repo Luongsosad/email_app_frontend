@@ -88,3 +88,84 @@ export function stripHtmlTags(html, maxLength = null) {
 
   return text;
 }
+
+/**
+ * Detect file type from filename and mimeType
+ * @param {string} filename - File name
+ * @param {string} mimeType - MIME type (optional)
+ * @returns {object} { type: 'image'|'pdf'|'text'|'video'|'audio'|'office'|'other', canPreview: boolean }
+ */
+export function detectFileType(filename, mimeType = '') {
+  const extension = filename.split('.').pop()?.toLowerCase() || ''
+  const mimeLower = mimeType.toLowerCase()
+
+  // Image types
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico']
+  const imageMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml', 'image/bmp', 'image/x-icon']
+  
+  // PDF
+  const pdfExtensions = ['pdf']
+  const pdfMimes = ['application/pdf']
+  
+  // Text types
+  const textExtensions = ['txt', 'md', 'json', 'xml', 'csv', 'log', 'js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'html', 'css', 'scss', 'yaml', 'yml']
+  const textMimes = ['text/plain', 'text/markdown', 'application/json', 'text/xml', 'text/csv', 'text/javascript', 'text/css', 'text/html']
+  
+  // Video types
+  const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'avi']
+  const videoMimes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo']
+  
+  // Audio types
+  const audioExtensions = ['mp3', 'wav', 'ogg', 'm4a', 'flac']
+  const audioMimes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/flac']
+  
+  // Office types (can use Google Docs Viewer)
+  const officeExtensions = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']
+  const officeMimes = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
+
+  // Check by MIME type first (more reliable)
+  if (mimeLower) {
+    if (imageMimes.includes(mimeLower)) {
+      return { type: 'image', canPreview: true }
+    }
+    if (pdfMimes.includes(mimeLower)) {
+      return { type: 'pdf', canPreview: true }
+    }
+    if (textMimes.includes(mimeLower)) {
+      return { type: 'text', canPreview: true }
+    }
+    if (videoMimes.includes(mimeLower)) {
+      return { type: 'video', canPreview: true }
+    }
+    if (audioMimes.includes(mimeLower)) {
+      return { type: 'audio', canPreview: true }
+    }
+    if (officeMimes.includes(mimeLower)) {
+      return { type: 'office', canPreview: true }
+    }
+  }
+
+  // Fallback to extension
+  if (imageExtensions.includes(extension)) {
+    return { type: 'image', canPreview: true }
+  }
+  if (pdfExtensions.includes(extension)) {
+    return { type: 'pdf', canPreview: true }
+  }
+  if (textExtensions.includes(extension)) {
+    return { type: 'text', canPreview: true }
+  }
+  if (videoExtensions.includes(extension)) {
+    return { type: 'video', canPreview: true }
+  }
+  if (audioExtensions.includes(extension)) {
+    return { type: 'audio', canPreview: true }
+  }
+  if (officeExtensions.includes(extension)) {
+    return { type: 'office', canPreview: true }
+  }
+
+  return { type: 'other', canPreview: false }
+}

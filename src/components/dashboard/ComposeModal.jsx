@@ -191,7 +191,7 @@ export default function ComposeModal({ user, onSend, onClose }) {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/10 via-muted/60 to-secondary/10 rounded-t-lg border-b border-border backdrop-blur-md shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/10 via-muted/60 to-secondary/10 rounded-t-lg border-b border-border shadow-sm">
           <h2 className="text-sm font-semibold text-foreground">New Message</h2>
           <div className="flex items-center gap-1">
             <button
