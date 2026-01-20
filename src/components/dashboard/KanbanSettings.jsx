@@ -1,9 +1,17 @@
-import { useEffect, useMemo } from 'react'
-import { GripVertical, Trash2, Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { GripVertical, Trash2, Plus, Pencil } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { useKanbanColumns } from '../../hooks/use-kanban-columns'
 import { useMailbox } from '../../hooks/use-mailbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
 
 export default function KanbanSettings({ user }) {
   const userId = user?.id || user?.userId || null
@@ -14,6 +22,11 @@ export default function KanbanSettings({ user }) {
     deleteColumn,
     reorderColumns,
   } = useKanbanColumns(userId)
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingColumn, setEditingColumn] = useState(null) // null = create, object = edit
+  const [formTitle, setFormTitle] = useState('')
+  const [formLabelId, setFormLabelId] = useState('')
 
   const { mailboxes, fetchMailboxes } = useMailbox()
 
@@ -31,21 +44,47 @@ export default function KanbanSettings({ user }) {
     return mailboxes.filter((mb) => !excluded.has(mb.id))
   }, [mailboxes])
 
-  const handleTitleChange = (id, title) => {
-    updateColumn(id, { title })
-  }
-
-  const handleLabelChange = (id, gmailLabelId) => {
-    updateColumn(id, { gmailLabelId: gmailLabelId || null })
-  }
-
   const handleAddColumn = () => {
-    addColumn('New Column', null)
+    setEditingColumn(null)
+    setFormTitle('')
+    setFormLabelId('')
+    setIsModalOpen(true)
+  }
+
+  const handleEditColumn = (column) => {
+    setEditingColumn(column)
+    setFormTitle(column.title || '')
+    setFormLabelId(column.gmailLabelId || '')
+    setIsModalOpen(true)
+  }
+
+  const handleSaveModal = async () => {
+    const trimmedTitle = formTitle.trim()
+    if (!trimmedTitle) {
+      return
+    }
+
+    if (editingColumn) {
+      // Edit existing
+      await updateColumn(editingColumn.id, {
+        title: trimmedTitle,
+        gmailLabelId: formLabelId || null,
+      })
+    } else {
+      // Create new
+      await addColumn(trimmedTitle, formLabelId || null)
+    }
+
+    setIsModalOpen(false)
+    setEditingColumn(null)
+    setFormTitle('')
+    setFormLabelId('')
   }
 
   const handleDeleteColumn = (id) => {
-    // Prevent deleting inbox column
-    if (id === 'inbox') return
+    // Prevent deleting built-in/default columns (Inbox, Snoozed, etc.)
+    const column = columns.find((c) => c.id === id)
+    if (column?.isDefault) return
 
     deleteColumn(id)
   }
@@ -64,9 +103,6 @@ export default function KanbanSettings({ user }) {
     reorderColumns(orderedIds)
   }
 
-  // All changes are persisted immediately via useKanbanColumns.
-  // No need for Save button since changes are auto-saved.
-
   return (
     <div className="p-6 border-t border-border space-y-4">
       <h3 className="text-lg font-semibold text-foreground">
@@ -80,7 +116,12 @@ export default function KanbanSettings({ user }) {
       </p>
 
       <div className="space-y-3">
-        {columns.map((column) => (
+        {columns.map((column) => {
+          const mailboxLabel =
+            availableLabels.find((mb) => mb.id === column.gmailLabelId)?.name ||
+            (column.gmailLabelId || 'No Gmail label')
+
+          return (
           <div
             key={column.id}
             className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
@@ -94,48 +135,45 @@ export default function KanbanSettings({ user }) {
               <GripVertical className="w-4 h-4" />
             </button>
 
-            <div className="flex-1 space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={column.title}
-                  onChange={(e) =>
-                    handleTitleChange(column.id, e.target.value)
-                  }
-                  placeholder="Column title"
-                />
-                <select
-                  className="min-w-[180px] px-3 py-1 border border-border rounded-md bg-background text-sm"
-                  value={column.gmailLabelId || ''}
-                  onChange={(e) =>
-                    handleLabelChange(column.id, e.target.value || null)
-                  }
-                >
-                  <option value="">No Gmail label</option>
-                  {availableLabels.map((mb) => (
-                    <option key={mb.id} value={mb.id}>
-                      {mb.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{column.title}</span>
+                  <span className="text-xs text-muted-foreground">
+                    Gmail label: {mailboxLabel}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Column ID: <span className="font-mono">{column.id}</span>
               </p>
             </div>
 
-            {column.id !== 'inbox' && (
+            <div className="flex flex-col items-end gap-2">
               <Button
                 type="button"
                 size="icon-sm"
                 variant="ghost"
-                onClick={() => handleDeleteColumn(column.id)}
-                title="Delete column"
+                onClick={() => handleEditColumn(column)}
+                title="Edit column"
               >
-                <Trash2 className="w-4 h-4 text-destructive" />
+                <Pencil className="w-4 h-4" />
               </Button>
-            )}
+
+              {!column.isDefault && (
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => handleDeleteColumn(column.id)}
+                  title="Delete column"
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              )}
+            </div>
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="flex items-center justify-end pt-2 gap-2">
@@ -149,10 +187,63 @@ export default function KanbanSettings({ user }) {
           Add Column
         </Button>
       </div>
-      
-      <p className="text-xs text-muted-foreground mt-2">
-        Changes are saved automatically
-      </p>
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingColumn ? 'Edit column' : 'Add new column'}
+            </DialogTitle>
+            <DialogDescription>
+              Set the column name and optional Gmail label mapping.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">
+                Column name
+              </label>
+              <Input
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="e.g. In Review"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-foreground">
+                Gmail label (optional)
+              </label>
+              <select
+                className="w-full px-3 py-2 border border-border rounded-md bg-background text-sm"
+                value={formLabelId}
+                onChange={(e) => setFormLabelId(e.target.value)}
+              >
+                <option value="">No Gmail label</option>
+                {availableLabels.map((mb) => (
+                  <option key={mb.id} value={mb.id}>
+                    {mb.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSaveModal}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

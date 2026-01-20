@@ -352,6 +352,46 @@ function MailViewer({
               </div>
             )}
 
+            {/* Gmail Labels */}
+            {email.labelIds && email.labelIds.length > 0 && (
+              <div className="mb-6 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground mr-1">Labels:</span>
+                {email.labelIds
+                  .filter(label => !['UNREAD', 'CATEGORY_PERSONAL', 'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_FORUMS'].includes(label))
+                  .map((label) => {
+                    // Format label name for display
+                    const displayName = label
+                      .replace('Label_', '')
+                      .replace(/_/g, ' ')
+                      .replace(/^INBOX$/i, 'Inbox')
+                      .replace(/^SENT$/i, 'Sent')
+                      .replace(/^DRAFT$/i, 'Draft')
+                      .replace(/^TRASH$/i, 'Trash')
+                      .replace(/^SPAM$/i, 'Spam')
+                      .replace(/^STARRED$/i, '⭐ Starred')
+                      .replace(/^IMPORTANT$/i, '❗ Important')
+
+                    // Determine badge color based on label type
+                    let badgeClass = 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                    if (label === 'INBOX') badgeClass = 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                    else if (label === 'STARRED') badgeClass = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300'
+                    else if (label === 'IMPORTANT') badgeClass = 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
+                    else if (label === 'SENT') badgeClass = 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
+                    else if (label === 'DRAFT') badgeClass = 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300'
+                    else if (label.startsWith('Label_')) badgeClass = 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+
+                    return (
+                      <span
+                        key={label}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${badgeClass}`}
+                      >
+                        {displayName}
+                      </span>
+                    )
+                  })}
+              </div>
+            )}
+
             {/* Summary */}
             {/* Don't show inline loading if using global notification */}
             {loadingSummary && !summary && !onSummaryStart && (

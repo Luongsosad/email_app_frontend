@@ -3,6 +3,48 @@ import { getBulkEmailStatuses, updateEmailStatus } from "../lib/api/email.api";
 
 const STORAGE_KEY_PREFIX = "kanban_email_status";
 
+// Map backend status names to frontend column IDs
+const STATUS_NAME_TO_COLUMN_ID = {
+  'Inbox': 'inbox',
+  'To Do': 'todo',
+  'In Progress': 'in-progress',
+  'Done': 'done',
+  'Snoozed': 'snoozed',
+  // Also support lowercase for backwards compatibility
+  'inbox': 'inbox',
+  'todo': 'todo',
+  'in-progress': 'in-progress',
+  'done': 'done',
+  'snoozed': 'snoozed',
+};
+
+/**
+ * Convert backend status name to frontend column ID
+ */
+function mapStatusToColumnId(status) {
+  if (!status) return 'inbox';
+  
+  // Check direct mapping
+  if (STATUS_NAME_TO_COLUMN_ID[status]) {
+    return STATUS_NAME_TO_COLUMN_ID[status];
+  }
+  
+  // If it's a numeric ID (from new kanban_columns table), keep as is
+  if (typeof status === 'number' || !isNaN(parseInt(status))) {
+    return status;
+  }
+  
+  // Try to match by lowercasing and removing spaces
+  const normalized = status.toLowerCase().replace(/\s+/g, '-');
+  if (STATUS_NAME_TO_COLUMN_ID[normalized]) {
+    return STATUS_NAME_TO_COLUMN_ID[normalized];
+  }
+  
+  // Default to inbox if no match
+  console.warn(`Unknown status "${status}", defaulting to inbox`);
+  return 'inbox';
+}
+
 /**
  * Hook to manage email-to-column mapping for Kanban board
  * Stores status in localStorage per user
@@ -205,10 +247,11 @@ export function useKanbanStatus(userId = null) {
       try {
         const response = await getBulkEmailStatuses(emailIds);
         if (response.success && response.data) {
-          // Convert array to map
+          // Convert array to map, mapping backend status names to frontend column IDs
           const backendStatusMap = {};
           response.data.forEach((status) => {
-            backendStatusMap[status.emailId] = status.status;
+            // Map backend status name (e.g., "To Do") to frontend column ID (e.g., "todo")
+            backendStatusMap[status.emailId] = mapStatusToColumnId(status.status);
           });
 
           // Merge with existing statuses (backend takes precedence for these specific emails)

@@ -28,7 +28,7 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
-  
+
   // Summary notification state
   const [summaryNotification, setSummaryNotification] = useState({
     isLoading: false,
@@ -36,7 +36,7 @@ export default function DashboardPage({ user, onLogout }) {
     emailSubject: null,
   })
   const [isSearchMode, setIsSearchMode] = useState(false)
-  
+
   // View mode state: 'traditional' | 'kanban'
   const [viewMode, setViewMode] = useState(() => {
     try {
@@ -46,12 +46,12 @@ export default function DashboardPage({ user, onLogout }) {
       return 'traditional'
     }
   })
-  
+
   const { toast } = useToast()
-  
+
   // Use hooks for Gmail data
-  const { 
-    emails, 
+  const {
+    emails,
     emailDetail,
     loading: emailLoading,
     loadingDetail: emailDetailLoading,
@@ -71,7 +71,7 @@ export default function DashboardPage({ user, onLogout }) {
     deleteEmail,
     setEmails, // Added to allow direct state updates
   } = useEmail()
-  
+
   const {
     mailboxes,
     loading: mailboxLoading,
@@ -93,34 +93,35 @@ export default function DashboardPage({ user, onLogout }) {
   useEffect(() => {
     const fetchAllEmails = async () => {
       if (!selectedFolder) return
-      
+
       // Skip fetching if we're in search mode - search results should persist
       if (isSearchMode) {
         return
       }
-      
+
       setSearchQuery('')
       setCurrentPageToken('')
-      
+
       if (viewMode === 'kanban') {
-        // In Kanban view, fetch both INBOX and SNOOZED emails
+        // In Kanban view, fetch ALL emails (not just INBOX) plus snoozed emails from backend DB
+        // This prevents emails moved out of INBOX (via Gmail label sync) from disappearing after reload.
         try {
-          // Fetch INBOX emails
-          await fetchEmails('INBOX', 1, 20, '', '')
-          
+          // Fetch ALL emails
+          await fetchEmails('ALL', 1, 50, '', '')
+
           // Also fetch snoozed emails and merge them
           const snoozedResult = await emailApi.getSnoozedEmails()
           if (snoozedResult.success && snoozedResult.data) {
             setEmails(prevEmails => {
               // Create a map to avoid duplicates
               const emailMap = new Map()
-              
+
               // Add existing emails
               prevEmails.forEach(email => emailMap.set(email.id, email))
-              
+
               // Add/update snoozed emails
               snoozedResult.data.forEach(email => emailMap.set(email.id, email))
-              
+
               return Array.from(emailMap.values())
             })
           }
@@ -132,7 +133,7 @@ export default function DashboardPage({ user, onLogout }) {
         fetchEmails(selectedFolder, 1, 20, '', '')
       }
     }
-    
+
     fetchAllEmails()
   }, [selectedFolder, viewMode, isSearchMode]) // Added isSearchMode to deps
 
@@ -169,7 +170,7 @@ export default function DashboardPage({ user, onLogout }) {
                 : email
             )
           )
-          
+
           // Also refresh from backend to ensure consistency
           fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)
         }
@@ -199,7 +200,7 @@ export default function DashboardPage({ user, onLogout }) {
     if (viewMode === 'kanban') {
       return emails
     }
-    
+
     // In List view, filter based on selected folder
     // If we're in the snoozed folder, only show snoozed emails
     if (selectedFolder === 'snoozed') {
@@ -212,7 +213,7 @@ export default function DashboardPage({ user, onLogout }) {
         return false
       })
     }
-    
+
     // For all other folders (INBOX, SENT, etc.), exclude actively snoozed emails
     return emails.filter(email => {
       // Check if email is actively snoozed (has future snoozedUntil date)
@@ -341,7 +342,7 @@ export default function DashboardPage({ user, onLogout }) {
           isRead: result.data.isRead !== false,
           snoozedUntil: null,
         }
-        
+
         // Add to emails array if not already present
         setEmails(prevEmails => {
           const exists = prevEmails.find(e => e.id === emailId)
@@ -365,7 +366,7 @@ export default function DashboardPage({ user, onLogout }) {
       }
     }
     const result = await toggleStar(emailId, isStarred)
-    
+
     if (result?.success) {
       toast({
         title: isStarred ? 'Star removed' : 'Star added',
@@ -382,7 +383,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleMoveToSpam = useCallback(async (emailId) => {
     const result = await moveToSpam(emailId)
-    
+
     if (result?.success) {
       toast({
         title: 'Moved to spam',
@@ -402,7 +403,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleDelete = useCallback(async (emailId) => {
     const result = await deleteEmail(emailId, false)
-    
+
     if (result?.success) {
       toast({
         title: 'Email deleted',
@@ -422,7 +423,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleArchive = useCallback(async (emailId) => {
     const result = await archiveEmail(emailId)
-    
+
     if (result?.success) {
       toast({
         title: 'Email archived',
@@ -443,7 +444,7 @@ export default function DashboardPage({ user, onLogout }) {
   const handleSnooze = useCallback(async (emailId, snoozeUntil) => {
     try {
       const result = await emailApi.snoozeEmail(emailId, snoozeUntil)
-      
+
       if (result?.success) {
         toast({
           title: 'Email snoozed',
@@ -451,11 +452,11 @@ export default function DashboardPage({ user, onLogout }) {
         })
         // Close the email viewer
         setSelectedEmail(null)
-        
+
         // Update local state immediately by adding snoozedUntil to the email
-        setEmails(prevEmails => 
-          prevEmails.map(email => 
-            email.id === emailId 
+        setEmails(prevEmails =>
+          prevEmails.map(email =>
+            email.id === emailId
               ? { ...email, snoozedUntil: snoozeUntil }
               : email
           )
@@ -478,7 +479,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleMarkAsRead = useCallback(async (emailId) => {
     const result = await markAsRead(emailId)
-    
+
     if (result?.success) {
       toast({
         title: 'Marked as read',
@@ -495,7 +496,7 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleMarkAsUnread = useCallback(async (emailId) => {
     const result = await markAsUnread(emailId)
-    
+
     if (result?.success) {
       toast({
         title: 'Marked as unread',
@@ -512,13 +513,13 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleSendEmail = useCallback(async (composeData) => {
     setShowCompose(false)
-    
+
     // Show success toast
     toast({
       title: 'Email sent',
       description: `Email sent successfully to ${composeData.to.join(', ')}`,
     })
-    
+
     // Refresh sent folder if currently viewing it
     if (selectedFolder === 'SENT') {
       setTimeout(() => {
@@ -529,12 +530,12 @@ export default function DashboardPage({ user, onLogout }) {
 
   const handleToggleViewMode = useCallback(() => {
     const newMode = viewMode === 'traditional' ? 'kanban' : 'traditional'
-    
+
     // If switching to kanban while in search mode, clear search first
     if (newMode === 'kanban' && isSearchMode) {
       handleClearSearch()
     }
-    
+
     setViewMode(newMode)
     try {
       localStorage.setItem(VIEW_MODE_STORAGE_KEY, newMode)
@@ -566,15 +567,15 @@ export default function DashboardPage({ user, onLogout }) {
       emailId: null,
       emailSubject: null,
     })
-    
+
     // If already selected, just dismiss
     if (selectedEmail?.id === emailId) {
       return
     }
-    
+
     // Try to find email in current list
     let email = emails.find(e => e.id === emailId)
-    
+
     // If not found, search in INBOX
     if (!email) {
       try {
@@ -587,13 +588,13 @@ export default function DashboardPage({ user, onLogout }) {
         console.error('[DashboardPage] Search failed:', error)
       }
     }
-    
+
     // If still not found, fetch detail
     if (!email) {
       try {
         await fetchEmailDetail(emailId)
         await new Promise(resolve => setTimeout(resolve, 150))
-        
+
         if (emailDetail?.id === emailId) {
           email = emailDetail
         } else {
@@ -616,7 +617,7 @@ export default function DashboardPage({ user, onLogout }) {
         return
       }
     }
-    
+
     // Select email
     if (email) {
       setSelectedEmail(email)
@@ -645,7 +646,7 @@ export default function DashboardPage({ user, onLogout }) {
           </Alert>
         </div>
       )}
-      
+
       {/* Summary notification */}
       <SummaryNotification
         isLoading={summaryNotification.isLoading}
@@ -667,7 +668,7 @@ export default function DashboardPage({ user, onLogout }) {
         mailboxes={mailboxes}
         loading={mailboxLoading}
       />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden max-md:min-h-0">
         {/* Header with View Toggle and Search Bar */}
         <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 shadow-md">
@@ -677,11 +678,10 @@ export default function DashboardPage({ user, onLogout }) {
               variant={viewMode === 'traditional' ? 'default' : 'outline'}
               size="sm"
               onClick={handleToggleViewMode}
-              className={`gap-1 sm:gap-2 flex-shrink-0 transition-colors duration-200 min-h-[36px] sm:min-h-[40px] ${
-                viewMode === 'traditional' 
-                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-md shadow-primary/20' 
+              className={`gap-1 sm:gap-2 flex-shrink-0 transition-colors duration-200 min-h-[36px] sm:min-h-[40px] ${viewMode === 'traditional'
+                  ? 'bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 shadow-md shadow-primary/20'
                   : 'hover:bg-muted/60'
-              }`}
+                }`}
               title={viewMode === 'traditional' ? 'Switch to Kanban view' : 'Switch to List view'}
             >
               {viewMode === 'traditional' ? (
@@ -723,7 +723,7 @@ export default function DashboardPage({ user, onLogout }) {
             )}
           </div>
         </div>
-        
+
         {/* Mail content area */}
         {viewMode === 'kanban' && !isSearchMode ? (
           <div className="flex-1 flex overflow-hidden max-md:flex-col">
@@ -745,7 +745,7 @@ export default function DashboardPage({ user, onLogout }) {
                 onEmailMoved={handleEmailMoved}
               />
             </Suspense>
-            
+
             {selectedEmail && (
               <MailViewer
                 email={emailDetail || selectedEmail}
@@ -801,7 +801,7 @@ export default function DashboardPage({ user, onLogout }) {
               onMarkAsUnread={handleMarkAsUnread}
               loading={emailLoading}
             />
-            
+
             {selectedEmail && (
               <MailViewer
                 email={emailDetail || selectedEmail}
