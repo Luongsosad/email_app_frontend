@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Star, Paperclip, GripVertical, Sparkles } from 'lucide-react'
-import { formatDate, stripHtmlTags } from '@/lib/utils/utils'
+import { Star, Paperclip, GripVertical, Sparkles, Clock } from 'lucide-react'
+import { formatDate, formatSnoozeTime, stripHtmlTags } from '@/lib/utils/utils'
 import { cn } from '@/lib/utils/utils'
 import { useState, useEffect } from 'react'
 import { emailApi } from '@/lib/api'
@@ -165,6 +165,16 @@ function KanbanCard({
           </div>
         )}
 
+        {/* Snooze time indicator */}
+        {email.snoozedUntil && (
+          <div className="flex items-center gap-1.5 mt-2 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-200/60 dark:border-blue-800/60 rounded-md px-2 py-1.5">
+            <Clock size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <span className="text-xs text-blue-800 dark:text-blue-200 font-medium">
+              {formatSnoozeTime(new Date(email.snoozedUntil))}
+            </span>
+          </div>
+        )}
+
         {/* Unread indicator */}
         {!email.isRead && (
           <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-gradient-to-br from-primary to-secondary rounded-full shadow-md shadow-primary/50" />
@@ -176,4 +186,3 @@ function KanbanCard({
 }
 
 export default memo(KanbanCard)
-

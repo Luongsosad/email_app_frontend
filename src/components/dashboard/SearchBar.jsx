@@ -1,5 +1,5 @@
 import { memo, useRef, useEffect, useState } from 'react'
-import { Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react'
 import SearchSuggestions from './SearchSuggestions'
 import { useSearchSuggestions } from '../../hooks/use-search-suggestions'
 
@@ -15,6 +15,7 @@ function SearchBar({
   const [searchQuery, setSearchQuery] = useState(initialQuery || '')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [searchType, setSearchType] = useState('fuzzy') // 'fuzzy' or 'semantic'
   const inputRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -60,7 +61,7 @@ function SearchBar({
       // If no suggestions, handle Enter to trigger search
       if (e.key === 'Enter' && searchQuery.trim()) {
         e.preventDefault()
-        handleSemanticSearch(searchQuery)
+        handleSearchExecution(searchQuery)
       }
       return
     }
@@ -81,7 +82,7 @@ function SearchBar({
         if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
           handleSuggestionSelect(suggestions[selectedIndex].text)
         } else if (searchQuery.trim()) {
-          handleSemanticSearch(searchQuery)
+          handleSearchExecution(searchQuery)
         }
         break
       case 'Escape':
@@ -99,25 +100,29 @@ function SearchBar({
     setShowSuggestions(false)
     setSelectedIndex(-1)
     saveRecentSearch(suggestionText)
-    handleSemanticSearch(suggestionText)
+    handleSearchExecution(suggestionText)
   }
 
-  const handleSemanticSearch = (query) => {
+  const handleSearchExecution = (query) => {
     // Close suggestions after search
     setShowSuggestions(false)
     setSelectedIndex(-1)
     
-    if (onSemanticSearch && query.trim()) {
-      onSemanticSearch(query.trim())
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) return
+
+    // Execute search based on selected type
+    if (searchType === 'semantic' && onSemanticSearch) {
+      onSemanticSearch(trimmedQuery)
     } else if (onSearch) {
-      // Fallback to regular search if semantic search not available
-      onSearch(query.trim())
+      // Use fuzzy search (default)
+      onSearch(trimmedQuery)
     }
   }
 
   const handleSearchButtonClick = () => {
     if (searchQuery.trim()) {
-      handleSemanticSearch(searchQuery)
+      handleSearchExecution(searchQuery)
     }
   }
 
@@ -152,6 +157,33 @@ function SearchBar({
         {/* Search */}
         <div className="flex-1 max-w-2xl">
           <div ref={containerRef} className="relative flex items-center gap-2">
+            {/* Search Type Toggle */}
+            <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
+              <button
+                onClick={() => setSearchType('fuzzy')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                  searchType === 'fuzzy'
+                    ? 'bg-background text-primary shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Fuzzy search - Fast keyword matching with typo tolerance"
+              >
+                <Search size={14} />
+                Fuzzy
+              </button>
+              <button
+                onClick={() => setSearchType('semantic')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 flex items-center gap-1.5 ${
+                  searchType === 'semantic'
+                    ? 'bg-background text-primary shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Semantic search - AI-powered contextual understanding"
+              >
+                <Sparkles size={14} />
+                AI
+              </button>
+            </div>
             <div className="relative flex-1">
               <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" />
               <input

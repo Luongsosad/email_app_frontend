@@ -92,6 +92,27 @@ export const replyToEmail = async (emailId, replyData) => {
 };
 
 /**
+ * Forward an email
+ * @param {string} emailId - The email ID to forward
+ * @param {Object} forwardData - Forward data
+ * @param {string[]} forwardData.to - Array of recipient emails
+ * @param {string} forwardData.body - Additional message/context (optional)
+ * @param {Array<{filename: string, content: string, mimeType: string}>} forwardData.attachments - Attachments (optional)
+ * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ */
+export const forwardEmail = async (emailId, forwardData) => {
+  try {
+    return await apiCall(`/emails/${emailId}/forward`, {
+      method: "POST",
+      body: JSON.stringify(forwardData),
+    });
+  } catch (error) {
+    console.error("Error forwarding email:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Modify email (mark read/unread, star, etc.)
  * @param {string} emailId - The email ID
  * @param {Object} modifyData - Modify data

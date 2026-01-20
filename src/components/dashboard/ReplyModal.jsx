@@ -2,11 +2,28 @@ import { useState } from 'react'
 import { X, Send, Bold, Italic, Underline, List, Code, Loader2 } from 'lucide-react'
 import { toggleTextFormatting } from '@/lib/utils/utils'
 import { emailApi } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ReplyModal({ email, onClose, onSend }) {
-  const [body, setBody] = useState(`\n\nOn ${new Date(email.receivedDate || email.timestamp).toLocaleString()}, ${email.from} wrote:\n> ${(email.body || '').split('\n')[0]}`)
+  // Format the original email body with quote markers
+  const formatOriginalEmail = () => {
+    const originalBody = email.body || email.snippet || ''
+    // Add '> ' to the beginning of each line to quote the original message
+    const quotedBody = originalBody
+      .split('\n')
+      .map(line => `> ${line}`)
+      .join('\n')
+    
+    const dateStr = new Date(email.receivedDate || email.timestamp).toLocaleString()
+    const fromStr = email.from || email.senderName || 'Unknown Sender'
+    
+    return `\n\nOn ${dateStr}, ${fromStr} wrote:\n${quotedBody}`
+  }
+
+  const [body, setBody] = useState(formatOriginalEmail())
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
+  const { toast } = useToast()
 
   const handleFormat = (tag) => {
     const textarea = document.getElementById('reply-body')
@@ -43,12 +60,30 @@ export default function ReplyModal({ email, onClose, onSend }) {
       })
 
       if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Reply sent successfully',
+          variant: 'default',
+        })
         onSend()
+        onClose()
       } else {
-        setError(result.error || 'Failed to send reply')
+        const errorMsg = result.error || 'Failed to send reply'
+        setError(errorMsg)
+        toast({
+          title: 'Error',
+          description: errorMsg,
+          variant: 'destructive',
+        })
       }
     } catch (err) {
-      setError('Failed to send reply. Please try again.')
+      const errorMsg = err.message || 'Failed to send reply. Please try again.'
+      setError(errorMsg)
+      toast({
+        title: 'Error',
+        description: errorMsg,
+        variant: 'destructive',
+      })
     } finally {
       setSending(false)
     }
@@ -56,7 +91,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="w-full max-w-2xl bg-card rounded-lg shadow-2xl flex flex-col max-h-96">
+      <div className="w-full max-w-2xl bg-card rounded-lg shadow-2xl flex flex-col max-h-96 min-h-[60vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">Reply to {email.from}</h2>
@@ -128,7 +163,7 @@ export default function ReplyModal({ email, onClose, onSend }) {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Write your reply..."
             className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-sm resize-none"
-            rows={6}
+            rows={14}
             disabled={sending}
           />
         </div>

@@ -28,6 +28,49 @@ export function formatDate(date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/**
+ * Format snooze time to display detailed date and time
+ * @param {Date} date - The snooze until date
+ * @returns {string} Formatted snooze time
+ */
+export function formatSnoozeTime(date) {
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  const timeStr = date.toLocaleTimeString("en-US", { 
+    hour: "numeric", 
+    minute: "2-digit",
+    hour12: true 
+  });
+
+  // If snoozed until today
+  if (diffDays === 0 && diffMs > 0) {
+    return `Today at ${timeStr}`;
+  }
+  
+  // If snoozed until tomorrow
+  if (diffDays === 1) {
+    return `Tomorrow at ${timeStr}`;
+  }
+  
+  // If within this week
+  if (diffDays > 1 && diffDays < 7) {
+    const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `${dayName} at ${timeStr}`;
+  }
+  
+  // For dates further away, show full date and time
+  const dateStr = date.toLocaleDateString("en-US", { 
+    month: "short", 
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined
+  });
+  return `${dateStr} at ${timeStr}`;
+}
+
 export function extractEmailDomain(email) {
   return email.split("@")[1]?.toLowerCase() || "";
 }

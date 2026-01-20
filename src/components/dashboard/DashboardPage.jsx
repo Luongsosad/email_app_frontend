@@ -10,6 +10,7 @@ import { Button } from '../ui/button'
 import { useEmail } from '../../hooks/use-email'
 import { useMailbox } from '../../hooks/use-mailbox'
 import { useKanbanStatus } from '../../hooks/use-kanban-status'
+import { useKanbanFilters } from '../../hooks/use-kanban-filters'
 import { Alert, AlertDescription } from '../ui/alert'
 import { useToast } from '../../hooks/use-toast'
 import { emailApi } from '../../lib/api'
@@ -28,6 +29,7 @@ export default function DashboardPage({ user, onLogout }) {
   const [showSettings, setShowSettings] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPageToken, setCurrentPageToken] = useState('')
+  const [currentSearchType, setCurrentSearchType] = useState('fuzzy') // Track current search type
 
   // Summary notification state
   const [summaryNotification, setSummaryNotification] = useState({
@@ -83,6 +85,17 @@ export default function DashboardPage({ user, onLogout }) {
   // Get userId for kanban status sync
   const userId = user?.id || user?.userId || null
   const { syncWithBackend } = useKanbanStatus(userId)
+
+  // Kanban filters hook (sử dụng cho cả kanban và list view)
+  const {
+    sortBy,
+    filters,
+    hasActiveFilters,
+    updateSort,
+    updateFilter,
+    clearFilters,
+    procesEmails,
+  } = useKanbanFilters()
 
   // Fetch mailboxes on mount
   useEffect(() => {
@@ -226,6 +239,14 @@ export default function DashboardPage({ user, onLogout }) {
     })
   }, [emails, selectedFolder, viewMode])
 
+  // Apply sorting and filtering for list view only
+  const processedEmailsForList = useMemo(() => {
+    if (viewMode === 'kanban' || isSearchMode) {
+      return filteredEmails
+    }
+    return procesEmails(filteredEmails)
+  }, [filteredEmails, viewMode, isSearchMode, procesEmails])
+
   const handleFolderSelect = useCallback((folder) => {
     setSelectedFolder(folder)
     setSelectedEmail(null)
@@ -237,6 +258,7 @@ export default function DashboardPage({ user, onLogout }) {
   const handleSearch = useCallback((query) => {
     setSearchQuery(query)
     setCurrentPageToken('')
+    setCurrentSearchType('fuzzy') // Set search type
 
     const trimmed = query.trim()
     if (!trimmed) {
@@ -258,13 +280,14 @@ export default function DashboardPage({ user, onLogout }) {
       }
     }
 
-    // Use fuzzy search as fallback
+    // Use fuzzy search
     searchEmailsFuzzy(trimmed, 1, 20)
   }, [selectedFolder, fetchEmails, searchEmailsFuzzy, viewMode])
 
   const handleSemanticSearch = useCallback((query) => {
     setSearchQuery(query)
     setCurrentPageToken('')
+    setCurrentSearchType('semantic') // Set search type
 
     const trimmed = query.trim()
     if (!trimmed) {
@@ -296,12 +319,12 @@ export default function DashboardPage({ user, onLogout }) {
   }, [selectedFolder, fetchEmails, searchEmailsSemantic, searchEmailsFuzzy, viewMode])
 
   const handlePageChange = useCallback((page, pageToken = '') => {
-    // In search mode, use semantic search pagination (no Gmail pageToken)
+    // In search mode, use the appropriate search type based on currentSearchType
     if (isSearchMode) {
-      // Try semantic search first, fallback to fuzzy if needed
-      if (searchEmailsSemantic) {
+      if (currentSearchType === 'semantic' && searchEmailsSemantic) {
         searchEmailsSemantic(searchQuery, page, 20)
       } else {
+        // Use fuzzy search (default or fallback)
         searchEmailsFuzzy(searchQuery, page, 20)
       }
       return
@@ -309,7 +332,7 @@ export default function DashboardPage({ user, onLogout }) {
 
     setCurrentPageToken(pageToken)
     fetchEmails(selectedFolder, page, 20, searchQuery, pageToken)
-  }, [isSearchMode, searchQuery, selectedFolder, fetchEmails, searchEmailsFuzzy, searchEmailsSemantic])
+  }, [isSearchMode, currentSearchType, searchQuery, selectedFolder, fetchEmails, searchEmailsFuzzy, searchEmailsSemantic])
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('')
@@ -790,7 +813,7 @@ export default function DashboardPage({ user, onLogout }) {
         ) : (
           <div className="flex-1 flex overflow-hidden max-md:flex-col">
             <MailList
-              emails={filteredEmails}
+              emails={processedEmailsForList}
               selectedEmail={selectedEmail}
               onSelectEmail={handleSelectEmail}
               onStarEmail={handleStarEmail}
@@ -800,6 +823,11 @@ export default function DashboardPage({ user, onLogout }) {
               onMarkAsRead={handleMarkAsRead}
               onMarkAsUnread={handleMarkAsUnread}
               loading={emailLoading}
+              sortBy={sortBy}
+              onSortChange={updateSort}
+              filters={filters}
+              onFilterChange={updateFilter}
+              onClearFilters={clearFilters}
             />
 
             {selectedEmail && (

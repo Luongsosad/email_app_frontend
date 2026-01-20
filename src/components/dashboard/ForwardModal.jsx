@@ -1,11 +1,15 @@
 import { useState } from 'react'
-import { X, Send, Bold, Italic, Underline, List, Code } from 'lucide-react'
+import { X, Send, Bold, Italic, Underline, List, Code, Loader2 } from 'lucide-react'
 import { validateEmail, toggleTextFormatting } from '@/lib/utils/utils'
+import { forwardEmail } from '@/lib/api/email.api'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ForwardModal({ email, onClose, onSend }) {
   const [to, setTo] = useState('')
-  const [body, setBody] = useState(`\n\n---------- Forwarded message ---------\nFrom: ${email.fromName} <${email.from}>\nDate: ${new Date(email.timestamp).toLocaleString()}\nSubject: ${email.subject}\n\n${email.body}`)
+  const [body, setBody] = useState('') // Empty by default - backend will add forwarded message
   const [errors, setErrors] = useState([])
+  const [isSending, setIsSending] = useState(false)
+  const { toast } = useToast()
 
   const handleFormat = (tag) => {
     const textarea = document.getElementById('forward-body')
@@ -27,7 +31,7 @@ export default function ForwardModal({ email, onClose, onSend }) {
     }, 0)
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     setErrors([])
 
     if (!to.trim()) {
@@ -35,17 +39,54 @@ export default function ForwardModal({ email, onClose, onSend }) {
       return
     }
 
-    if (!validateEmail(to.trim())) {
-      setErrors(['Invalid email address'])
+    const recipients = to.split(',').map(email => email.trim()).filter(Boolean)
+    const invalidEmails = recipients.filter(email => !validateEmail(email))
+
+    if (invalidEmails.length > 0) {
+      setErrors([`Invalid email address(es): ${invalidEmails.join(', ')}`])
       return
     }
 
-    onSend()
+    setIsSending(true)
+
+    try {
+      const result = await forwardEmail(email.id, {
+        to: recipients,
+        body: body,
+      })
+
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Email forwarded successfully',
+          variant: 'default',
+        })
+        onSend?.()
+        onClose()
+      } else {
+        setErrors([result.error || 'Failed to forward email'])
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to forward email',
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      console.error('Error forwarding email:', error)
+      setErrors([error.message || 'An unexpected error occurred'])
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="w-full max-w-2xl bg-card rounded-lg shadow-2xl flex flex-col max-h-screen md:max-h-96">
+      <div className="w-full max-w-2xl bg-card rounded-lg shadow-2xl flex flex-col max-h-screen md:max-h-96 min-h-[60vh]">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground">Forward Email</h2>
@@ -123,7 +164,7 @@ export default function ForwardModal({ email, onClose, onSend }) {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Add a note before forwarding..."
             className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-sm resize-none"
-            rows={4}
+            rows={12}
           />
         </div>
 
@@ -131,16 +172,27 @@ export default function ForwardModal({ email, onClose, onSend }) {
         <div className="border-t border-border p-4 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition text-sm font-medium"
+            disabled={isSending}
+            className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={handleSend}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2"
+            disabled={isSending}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Send size={16} />
-            Forward
+            {isSending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Forwarding...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Forward
+              </>
+            )}
           </button>
         </div>
       </div>

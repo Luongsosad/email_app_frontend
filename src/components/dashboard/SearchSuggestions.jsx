@@ -81,7 +81,7 @@ function SearchSuggestions({
   }
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-card/98 border border-border rounded-xl shadow-xl shadow-primary/10 z-50 max-h-[200px] overflow-hidden animate-in fade-in-0 slide-in-from-top-2">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-card/98 bg-white border border-border rounded-xl shadow-xl shadow-primary/10 z-[100] max-h-[200px] overflow-hidden animate-in fade-in-0 slide-in-from-top-2">
       <div
         ref={listRef}
         className="overflow-y-auto max-h-[200px] scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
