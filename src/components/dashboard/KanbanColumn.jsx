@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Loader2 } from 'lucide-react'
 import KanbanCard from './KanbanCard'
 import { cn } from '@/lib/utils/utils'
 
-export default function KanbanColumn({
+function KanbanColumn({
   columnId,
   title,
   emails = [],

@@ -56,7 +56,7 @@ function MailViewer({
   const handleOpenInGmail = () => {
     if (!email?.id) return
 
-    const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${email.id}`
+    const gmailUrl = `https://mail.google.com/mail/u/1/#inbox/${email.id}`
     window.open(gmailUrl, '_blank', 'noopener,noreferrer')
   }
 
