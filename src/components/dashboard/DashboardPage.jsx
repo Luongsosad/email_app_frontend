@@ -132,8 +132,14 @@ export default function DashboardPage({ user, onLogout }) {
               // Add existing emails
               prevEmails.forEach(email => emailMap.set(email.id, email))
 
-              // Add/update snoozed emails
-              snoozedResult.data.forEach(email => emailMap.set(email.id, email))
+              // Add/update snoozed emails with normalized data
+              snoozedResult.data.forEach(email => {
+                const normalizedEmail = {
+                  ...email,
+                  hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
+                }
+                emailMap.set(email.id, normalizedEmail)
+              })
 
               return Array.from(emailMap.values())
             })
@@ -371,6 +377,8 @@ export default function DashboardPage({ user, onLogout }) {
           isStarred: result.data.isStarred || false,
           isRead: result.data.isRead !== false,
           snoozedUntil: null,
+          attachments: result.data.attachments || [],
+          hasAttachments: (result.data.attachments && result.data.attachments.length > 0) || result.data.hasAttachments,
         }
 
         // Add to emails array if not already present

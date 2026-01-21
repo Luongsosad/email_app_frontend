@@ -31,15 +31,20 @@ export function useEmail() {
           const response = await emailApi.getSnoozedEmails();
           if (response.success && response.data) {
             // Backend now returns array of emails directly with snoozeUntil field
-            const snoozedEmails = response.data || [];
-            setEmails(snoozedEmails);
+            const rawSnoozedEmails = response.data || [];
+            const processedSnoozedEmails = rawSnoozedEmails.map(email => ({
+              ...email,
+              hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
+            }));
+            
+            setEmails(processedSnoozedEmails);
             setPagination({
               page: 1,
-              pageSize: snoozedEmails.length,
-              total: snoozedEmails.length,
+              pageSize: processedSnoozedEmails.length,
+              total: processedSnoozedEmails.length,
               nextPageToken: null,
             });
-            return { success: true, data: { emails: snoozedEmails } };
+            return { success: true, data: { emails: processedSnoozedEmails } };
           } else {
             console.error(
               "[use-email] Failed to fetch snoozed emails:",
@@ -59,14 +64,21 @@ export function useEmail() {
           pageToken
         );
         if (response.success && response.data) {
-          setEmails(response.data.emails || []);
+          const rawEmails = response.data.emails || [];
+          const processedEmails = rawEmails.map(email => ({
+            ...email,
+            // Ensure hasAttachments is consistent
+            hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
+          }));
+          
+          setEmails(processedEmails);
           setPagination({
             page: response.data.page || page,
             pageSize: response.data.pageSize || pageSize,
             total: response.data.total || 0,
             nextPageToken: response.data.nextPageToken || null,
           });
-          return { success: true, data: response.data };
+          return { success: true, data: { ...response.data, emails: processedEmails } };
         } else {
           setError(response.error || "Failed to fetch emails");
           return { success: false, error: response.error };
@@ -273,14 +285,21 @@ export function useEmail() {
           pageSize
         );
         if (response.success && response.data) {
-          setEmails(response.data.emails || []);
+          const rawEmails = response.data.emails || [];
+          const processedEmails = rawEmails.map(email => ({
+            ...email,
+            // Ensure hasAttachments is consistent
+            hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
+          }));
+          
+          setEmails(processedEmails);
           setPagination({
             page: response.data.page || page,
             pageSize: response.data.pageSize || pageSize,
             total: response.data.total || 0,
             nextPageToken: null,
           });
-          return { success: true, data: response.data };
+          return { success: true, data: { ...response.data, emails: processedEmails } };
         }
 
         const message = response.error || "Failed to search emails";
@@ -337,6 +356,8 @@ export function useEmail() {
             snoozedUntil: null,
             // Store semantic score for potential display
             semanticScore: item.score || 0,
+            attachments: item.attachments || [],
+            hasAttachments: (item.attachments && item.attachments.length > 0) || item.hasAttachments || false,
           }));
 
           setEmails(transformedEmails);

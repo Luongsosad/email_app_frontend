@@ -71,7 +71,15 @@ export function useKanbanFilters() {
       
       // Filter by attachments
       if (filters.showOnlyWithAttachments) {
-        const hasAttachments = email.attachments && email.attachments.length > 0
+        // Check for attachments array or hasAttachments boolean
+        // Debugging: check what the email object has
+        const hasArray = email.attachments && Array.isArray(email.attachments) && email.attachments.length > 0
+        const hasBool = email.hasAttachments === true
+        
+        // Uncomment to debug if needed
+        // if (email.id === 'some-id') console.log('Filter debug:', { id: email.id, attachments: email.attachments, hasArray, hasBool })
+        
+        const hasAttachments = hasArray || hasBool
         if (!hasAttachments) {
           return false
         }
