@@ -5,7 +5,9 @@ export function Toaster() {
 
   return (
     <div className="fixed top-4 right-4 z-[100] flex max-h-screen w-full flex-col gap-2 md:max-w-[420px]">
-      {toasts.map(function ({ id, title, description, variant }) {
+      {toasts.map(function ({ id, title, description, variant, open }) {
+        if (open === false) return null
+        
         return (
           <div
             key={id}

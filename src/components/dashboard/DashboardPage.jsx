@@ -175,6 +175,13 @@ export default function DashboardPage({ user, onLogout }) {
         const result = await emailApi.checkExpiredSnoozes()
         // If any snoozes were restored, update local state immediately
         if (result?.data?.restoredCount > 0 && result?.data?.restoredEmailIds) {
+          // Show notification
+          toast({
+            title: 'Snoozed emails restored',
+            description: `${result.data.restoredCount} email(s) returned to Inbox`,
+            duration: 5000,
+          })
+
           // Update local state to remove snoozedUntil from expired emails
           setEmails(prevEmails =>
             prevEmails.map(email =>
@@ -184,7 +191,7 @@ export default function DashboardPage({ user, onLogout }) {
             )
           )
 
-          // Also refresh from backend to ensure consistency
+          // also refresh from backend to ensure consistency
           fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)
         }
       } catch (err) {
