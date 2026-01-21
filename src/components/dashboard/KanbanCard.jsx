@@ -31,7 +31,7 @@ function KanbanCard({
     },
   })
 
-  // Fetch summary when card mounts
+
   useEffect(() => {
     const fetchSummary = async () => {
       try {
@@ -40,13 +40,13 @@ function KanbanCard({
           setSummary(response.data.summary)
         }
       } catch (err) {
-        // Silently fail - summary is optional
+
       }
     }
     
     fetchSummary()
     
-    // Listen for summary updates from other components
+
     const handleSummaryUpdate = (event) => {
       if (event.detail.emailId === email.id) {
         setSummary(event.detail.summary)
@@ -67,7 +67,7 @@ function KanbanCard({
   }
 
   const handleClick = (e) => {
-    // Don't trigger onClick if clicking on drag handle
+
     if (e.target.closest('[data-drag-handle]')) {
       return
     }
@@ -88,7 +88,7 @@ function KanbanCard({
         !email.isRead && 'bg-gradient-to-br from-accent/15 to-accent/5 border-accent/30'
       )}
     >
-      {/* Drag Handle */}
+
       <div
         {...attributes}
         {...listeners}

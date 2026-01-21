@@ -26,11 +26,9 @@ export function useEmail() {
       setError(null);
       setSearchError(null);
       try {
-        // Handle snoozed folder separately
         if (mailboxId === "snoozed") {
           const response = await emailApi.getSnoozedEmails();
           if (response.success && response.data) {
-            // Backend now returns array of emails directly with snoozeUntil field
             const rawSnoozedEmails = response.data || [];
             const processedSnoozedEmails = rawSnoozedEmails.map(email => ({
               ...email,
@@ -46,16 +44,11 @@ export function useEmail() {
             });
             return { success: true, data: { emails: processedSnoozedEmails } };
           } else {
-            console.error(
-              "[use-email] Failed to fetch snoozed emails:",
-              response.error
-            );
             setError(response.error || "Failed to fetch snoozed emails");
             return { success: false, error: response.error };
           }
         }
 
-        // Regular mailbox fetch
         const response = await emailApi.fetchEmailsByMailbox(
           mailboxId,
           page,
@@ -67,7 +60,6 @@ export function useEmail() {
           const rawEmails = response.data.emails || [];
           const processedEmails = rawEmails.map(email => ({
             ...email,
-            // Ensure hasAttachments is consistent
             hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
           }));
           
@@ -153,7 +145,6 @@ export function useEmail() {
     try {
       const response = await emailApi.toggleStar(emailId, !isStarred);
       if (response.success) {
-        // Update local state
         setEmails((prev) =>
           prev.map((e) =>
             e.id === emailId ? { ...e, isStarred: !isStarred } : e
@@ -177,7 +168,6 @@ export function useEmail() {
     try {
       const response = await emailApi.markAsRead(emailId);
       if (response.success) {
-        // Update local state
         setEmails((prev) =>
           prev.map((e) => (e.id === emailId ? { ...e, isRead: true } : e))
         );
@@ -200,7 +190,6 @@ export function useEmail() {
       try {
         const response = await emailApi.markAsUnread(emailId);
         if (response.success) {
-          // Update local state
           setEmails((prev) =>
             prev.map((e) => (e.id === emailId ? { ...e, isRead: false } : e))
           );
@@ -224,7 +213,6 @@ export function useEmail() {
     try {
       const response = await emailApi.moveToSpam(emailId);
       if (response.success) {
-        // Remove from current list
         setEmails((prev) => prev.filter((e) => e.id !== emailId));
         return { success: true };
       }
@@ -241,7 +229,6 @@ export function useEmail() {
     try {
       const response = await emailApi.archiveEmail(emailId);
       if (response.success) {
-        // Remove from current list
         setEmails((prev) => prev.filter((e) => e.id !== emailId));
         return { success: true };
       }
@@ -258,7 +245,6 @@ export function useEmail() {
     try {
       const response = await emailApi.deleteEmail(emailId, permanent);
       if (response.success) {
-        // Remove from current list
         setEmails((prev) => prev.filter((e) => e.id !== emailId));
         return { success: true };
       }
@@ -288,7 +274,6 @@ export function useEmail() {
           const rawEmails = response.data.emails || [];
           const processedEmails = rawEmails.map(email => ({
             ...email,
-            // Ensure hasAttachments is consistent
             hasAttachments: (email.attachments && email.attachments.length > 0) || email.hasAttachments === true
           }));
           
@@ -339,12 +324,10 @@ export function useEmail() {
           const total = response.data.total || 0;
           const items = response.data.items || [];
 
-          // If semantic search returns empty, fallback to fuzzy search
           if (total === 0 || items.length === 0) {
             return await searchEmailsFuzzy(query, page, pageSize);
           }
 
-          // Transform backend response to frontend format
           const transformedEmails = items.map((item) => ({
             id: item.id,
             senderName: item.senderName || "",
@@ -354,7 +337,6 @@ export function useEmail() {
             isStarred: false, // Default value, can be enhanced later
             isRead: item.status !== "inbox", // Simple heuristic: inbox = unread
             snoozedUntil: null,
-            // Store semantic score for potential display
             semanticScore: item.score || 0,
             attachments: item.attachments || [],
             hasAttachments: (item.attachments && item.attachments.length > 0) || item.hasAttachments || false,
@@ -378,10 +360,8 @@ export function useEmail() {
           };
         }
 
-        // If semantic search failed, fallback to fuzzy search
         return await searchEmailsFuzzy(query, page, pageSize);
       } catch (err) {
-        // If error occurs, try fuzzy search as fallback
         try {
           return await searchEmailsFuzzy(query, page, pageSize);
         } catch (fuzzyErr) {
@@ -405,7 +385,6 @@ export function useEmail() {
       setSearchError(null);
 
       if (mailboxId) {
-        // Reload current mailbox with no search query
         await fetchEmails(mailboxId, page, pageSize, "", "");
       }
     },

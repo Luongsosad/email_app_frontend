@@ -49,7 +49,6 @@ function extractContacts(emails) {
   const contacts = new Map()
   
   emails.forEach(email => {
-    // Extract sender name
     if (email.senderName && email.senderName.trim()) {
       const name = email.senderName.trim()
       if (!contacts.has(name.toLowerCase())) {
@@ -61,7 +60,6 @@ function extractContacts(emails) {
       }
     }
     
-    // Extract sender email (if different from name)
     if (email.senderEmail && email.senderEmail.trim()) {
       const emailAddr = email.senderEmail.trim()
       if (!contacts.has(emailAddr.toLowerCase())) {
@@ -73,10 +71,8 @@ function extractContacts(emails) {
       }
     }
     
-    // Also check 'from' field if available
     if (email.from && email.from.trim()) {
       const from = email.from.trim()
-      // Try to extract name from "Name <email@example.com>" format
       const nameMatch = from.match(/^(.+?)\s*<(.+)>$/);
       if (nameMatch) {
         const name = nameMatch[1].trim().replace(/^["']|["']$/g, '')
@@ -130,7 +126,6 @@ function extractKeywords(emails) {
     })
   })
   
-  // Get top keywords (appearing in at least 2 emails)
   const keywords = Array.from(wordCount.entries())
     .filter(([word, count]) => count >= 2)
     .sort((a, b) => b[1] - a[1])
@@ -149,40 +144,32 @@ function extractKeywords(emails) {
  */
 function filterAndRankSuggestions(suggestions, query) {
   if (!query || !query.trim()) {
-    // If no query, return recent searches only
     return suggestions.filter(s => s.type === 'recent').slice(0, MAX_SUGGESTIONS)
   }
   
   const lowerQuery = query.toLowerCase().trim()
   
-  // Score each suggestion
   const scored = suggestions.map(suggestion => {
     const lowerText = suggestion.text.toLowerCase()
     let score = 0
     
-    // Exact match gets highest score
     if (lowerText === lowerQuery) {
       score = 1000
     }
-    // Starts with query
     else if (lowerText.startsWith(lowerQuery)) {
       score = 500
     }
-    // Contains query
     else if (lowerText.includes(lowerQuery)) {
       score = 100
     }
-    // No match
     else {
       score = 0
     }
     
-    // Boost contacts over keywords
     if (suggestion.type === 'contact') {
       score += 50
     }
     
-    // Boost recent searches
     if (suggestion.type === 'recent') {
       score += 25
     }
@@ -190,12 +177,11 @@ function filterAndRankSuggestions(suggestions, query) {
     return { ...suggestion, score }
   })
   
-  // Filter out non-matching and sort by score
   return scored
     .filter(s => s.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_SUGGESTIONS)
-    .map(({ score, ...rest }) => rest) // Remove score from result
+    .map(({ score, ...rest }) => rest)
 }
 
 /**
@@ -207,25 +193,21 @@ export function useSearchSuggestions(emails, query) {
       return []
     }
     
-    // Extract contacts and keywords from emails
     const contacts = extractContacts(emails)
     const keywords = extractKeywords(emails)
     
-    // Get recent searches
     const recentSearches = getRecentSearches().map(search => ({
       type: 'recent',
       text: search,
       original: search,
     }))
     
-    // Combine all suggestions
     const allSuggestions = [
       ...contacts,
       ...keywords,
       ...recentSearches,
     ]
     
-    // Filter and rank based on query
     return filterAndRankSuggestions(allSuggestions, query)
   }, [emails, query])
   

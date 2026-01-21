@@ -21,12 +21,10 @@ function SearchBar({
 
   const { suggestions, saveRecentSearch } = useSearchSuggestions(emails, searchQuery)
 
-  // Sync internal state when initialQuery changes (e.g., clear search from parent)
   useEffect(() => {
     setSearchQuery(initialQuery || '')
   }, [initialQuery])
 
-  // Show suggestions when query changes and has suggestions
   useEffect(() => {
     if (searchQuery.trim() && suggestions.length > 0) {
       setShowSuggestions(true)
@@ -37,7 +35,6 @@ function SearchBar({
     }
   }, [searchQuery, suggestions])
 
-  // Close suggestions when clicking outside
   useEffect(() => {
     if (!showSuggestions) return
 
@@ -48,17 +45,14 @@ function SearchBar({
       }
     }
 
-    // Use capture phase for better performance
     document.addEventListener('mousedown', handleClickOutside, true)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside, true)
     }
   }, [showSuggestions])
 
-  // Handle keyboard navigation
   const handleKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) {
-      // If no suggestions, handle Enter to trigger search
       if (e.key === 'Enter' && searchQuery.trim()) {
         e.preventDefault()
         handleSearchExecution(searchQuery)
@@ -104,18 +98,15 @@ function SearchBar({
   }
 
   const handleSearchExecution = (query) => {
-    // Close suggestions after search
     setShowSuggestions(false)
     setSelectedIndex(-1)
     
     const trimmedQuery = query.trim()
     if (!trimmedQuery) return
 
-    // Execute search based on selected type
     if (searchType === 'semantic' && onSemanticSearch) {
       onSemanticSearch(trimmedQuery)
     } else if (onSearch) {
-      // Use fuzzy search (default)
       onSearch(trimmedQuery)
     }
   }
@@ -127,8 +118,6 @@ function SearchBar({
   }
 
   const handleBlur = () => {
-    // Only close suggestions on blur, don't trigger search
-    // Use setTimeout to allow click events on suggestions to fire first
     setTimeout(() => {
       setShowSuggestions(false)
       setSelectedIndex(-1)

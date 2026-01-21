@@ -6,7 +6,7 @@ import { emailApi } from '@/lib/api'
 import { Button } from '../ui/button'
 import { cn } from '@/lib/utils/utils'
 
-// MailListItem component to handle individual email with summary
+
 function MailListItem({ 
   email,
   isSelected,
@@ -18,7 +18,7 @@ function MailListItem({
 }) {
   const [summary, setSummary] = useState(null)
 
-  // Fetch summary when item mounts
+
   useEffect(() => {
     const fetchSummary = async () => {
       try {
@@ -27,13 +27,13 @@ function MailListItem({
           setSummary(response.data.summary)
         }
       } catch (err) {
-        // Silently fail - summary is optional
+
       }
     }
     
     fetchSummary()
     
-    // Listen for summary updates from other components
+
     const handleSummaryUpdate = (event) => {
       if (event.detail.emailId === email.id) {
         setSummary(event.detail.summary)
@@ -116,7 +116,6 @@ function MailListItem({
             {email.subject || '(No Subject)'}
           </p>
 
-          {/* Summary (if available) */}
           {summary && (
             <div className="flex items-start gap-1.5 bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/60 dark:border-amber-800/60 rounded-lg px-2.5 py-1.5 mt-1 shadow-sm">
               <Sparkles size={12} className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -130,7 +129,6 @@ function MailListItem({
             </div>
           )}
 
-          {/* Preview/Body snippet - only show if no summary */}
           {email.preview && !summary && (
             <p className={`text-xs line-clamp-2 mt-1 ${
               isUnread 
@@ -158,7 +156,6 @@ function MailListItem({
             </div>
           )}
 
-          {/* Snooze time indicator */}
           {email.snoozedUntil && (
             <div className="flex items-center gap-1.5 mt-2 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-indigo-950/20 border border-blue-200/60 dark:border-blue-800/60 rounded-md px-2 py-1">
               <Clock size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
@@ -169,12 +166,10 @@ function MailListItem({
           )}
         </div>
 
-        {/* Unread indicator */}
         {isUnread && (
           <div className="mt-1.5 w-2.5 h-2.5 bg-gradient-to-br from-primary to-secondary rounded-full flex-shrink-0 shadow-md shadow-primary/40" />
         )}
 
-        {/* Three dots menu button */}
         <div
           role="button"
           tabIndex={0}
@@ -211,7 +206,6 @@ function MailList({
   onMarkAsRead,
   onMarkAsUnread,
   loading,
-  // Sorting and filtering props
   sortBy = 'newest',
   onSortChange,
   filters = {},
@@ -239,10 +233,8 @@ function MailList({
 
   return (
     <div className={`w-96 md:w-96 max-md:w-full max-md:border-r-0 max-md:border-b bg-card border-r border-border flex flex-col overflow-hidden shadow-sm ${selectedEmail ? 'max-md:hidden' : ''}`}>
-      {/* Toolbar - Sorting and Filtering */}
       <div className="border-b border-border bg-gradient-to-r from-card/80 via-card/60 to-card/80 shadow-sm">
         <div className="px-3 py-2.5 flex items-center justify-between gap-2">
-          {/* Left side - Sorting */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
               <ArrowDownAZ className="h-3.5 w-3.5" />
@@ -280,7 +272,6 @@ function MailList({
             </div>
           </div>
 
-          {/* Right side - Filters */}
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" />
@@ -330,7 +321,6 @@ function MailList({
         </div>
       </div>
 
-      {/* Email List */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {loading ? (
           <div className="flex flex-col items-center justify-center h-full p-8">

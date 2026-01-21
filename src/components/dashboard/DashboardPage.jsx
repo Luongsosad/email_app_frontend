@@ -97,17 +97,14 @@ export default function DashboardPage({ user, onLogout }) {
     procesEmails,
   } = useKanbanFilters()
 
-  // Fetch mailboxes on mount
   useEffect(() => {
     fetchMailboxes()
   }, [fetchMailboxes])
 
-  // Fetch emails when folder or view mode changes
   useEffect(() => {
     const fetchAllEmails = async () => {
       if (!selectedFolder) return
 
-      // Skip fetching if we're in search mode - search results should persist
       if (isSearchMode) {
         return
       }
@@ -116,23 +113,16 @@ export default function DashboardPage({ user, onLogout }) {
       setCurrentPageToken('')
 
       if (viewMode === 'kanban') {
-        // In Kanban view, fetch ALL emails (not just INBOX) plus snoozed emails from backend DB
-        // This prevents emails moved out of INBOX (via Gmail label sync) from disappearing after reload.
         try {
-          // Fetch ALL emails
           await fetchEmails('ALL', 1, 50, '', '')
 
-          // Also fetch snoozed emails and merge them
           const snoozedResult = await emailApi.getSnoozedEmails()
           if (snoozedResult.success && snoozedResult.data) {
             setEmails(prevEmails => {
-              // Create a map to avoid duplicates
               const emailMap = new Map()
 
-              // Add existing emails
               prevEmails.forEach(email => emailMap.set(email.id, email))
 
-              // Add/update snoozed emails with normalized data
               snoozedResult.data.forEach(email => {
                 const normalizedEmail = {
                   ...email,
@@ -145,16 +135,15 @@ export default function DashboardPage({ user, onLogout }) {
             })
           }
         } catch (error) {
-          // Silently handle error - toast will be shown by fetchEmails
+          // Silently handle error
         }
       } else {
-        // In List view, fetch selected folder
         fetchEmails(selectedFolder, 1, 20, '', '')
       }
     }
 
     fetchAllEmails()
-  }, [selectedFolder, viewMode, isSearchMode]) // Added isSearchMode to deps
+  }, [selectedFolder, viewMode, isSearchMode])
 
   // Sync kanban statuses with backend when emails are loaded
   // Use emailIds string to prevent unnecessary re-syncs
@@ -167,28 +156,22 @@ export default function DashboardPage({ user, onLogout }) {
     if (emailIdsString && viewMode === 'kanban') {
       const emailIds = emailIdsString.split(',').filter(id => id)
       if (emailIds.length > 0) {
-        syncWithBackend(emailIds).catch(() => {
-          // Silently handle sync errors
-        })
+        syncWithBackend(emailIds).catch(() => {})
       }
     }
   }, [emailIdsString, viewMode, syncWithBackend])
 
-  // Check for expired snoozes periodically (every 30 seconds)
   useEffect(() => {
     const checkExpiredSnoozes = async () => {
       try {
         const result = await emailApi.checkExpiredSnoozes()
-        // If any snoozes were restored, update local state immediately
         if (result?.data?.restoredCount > 0 && result?.data?.restoredEmailIds) {
-          // Show notification
           toast({
             title: 'Snoozed emails restored',
             description: `${result.data.restoredCount} email(s) returned to Inbox`,
             duration: 5000,
           })
 
-          // Update local state to remove snoozedUntil from expired emails
           setEmails(prevEmails =>
             prevEmails.map(email =>
               result.data.restoredEmailIds.includes(email.id)
@@ -197,38 +180,25 @@ export default function DashboardPage({ user, onLogout }) {
             )
           )
 
-          // also refresh from backend to ensure consistency
           fetchEmails(selectedFolder, pagination?.page || 1, 20, searchQuery, currentPageToken)
         }
-      } catch (err) {
-        console.error('Failed to check expired snoozes:', err)
-      }
+      } catch (err) {}
     }
 
-    // Check immediately on mount
     checkExpiredSnoozes()
 
-    // Then check every 30 seconds for better responsiveness
     const interval = setInterval(checkExpiredSnoozes, 30000)
 
     return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFolder, pagination?.page, searchQuery, currentPageToken]) // fetchEmails and setEmails are stable
+  }, [selectedFolder, pagination?.page, searchQuery, currentPageToken])
 
-  // Get unread counts from mailboxes
   const unreadCounts = useMemo(() => getUnreadCounts(), [mailboxes])
 
-  // Filter emails based on snooze status and current folder
-  // This applies to BOTH List View and Kanban View to ensure consistency
   const filteredEmails = useMemo(() => {
-    // In Kanban view, we want to show ALL emails (including snoozed ones)
-    // They will be organized into appropriate columns
     if (viewMode === 'kanban') {
       return emails
     }
 
-    // In List view, filter based on selected folder
-    // If we're in the snoozed folder, only show snoozed emails
     if (selectedFolder === 'snoozed') {
       return emails.filter(email => {
         if (email.snoozedUntil) {
@@ -607,7 +577,7 @@ export default function DashboardPage({ user, onLogout }) {
           email = result.data.emails.find(e => e.id === emailId)
         }
       } catch (error) {
-        console.error('[DashboardPage] Search failed:', error)
+        // Silently handle search error
       }
     }
 
@@ -630,7 +600,6 @@ export default function DashboardPage({ user, onLogout }) {
           }
         }
       } catch (error) {
-        console.error('[DashboardPage] Failed:', error)
         toast({
           title: 'Error',
           description: 'Could not open email',

@@ -3,14 +3,14 @@ import { getBulkEmailStatuses, updateEmailStatus } from "../lib/api/email.api";
 
 const STORAGE_KEY_PREFIX = "kanban_email_status";
 
-// Map backend status names to frontend column IDs
+
 const STATUS_NAME_TO_COLUMN_ID = {
   'Inbox': 'inbox',
   'To Do': 'todo',
   'In Progress': 'in-progress',
   'Done': 'done',
   'Snoozed': 'snoozed',
-  // Also support lowercase for backwards compatibility
+
   'inbox': 'inbox',
   'todo': 'todo',
   'in-progress': 'in-progress',
@@ -24,23 +24,23 @@ const STATUS_NAME_TO_COLUMN_ID = {
 function mapStatusToColumnId(status) {
   if (!status) return 'inbox';
   
-  // Check direct mapping
+
   if (STATUS_NAME_TO_COLUMN_ID[status]) {
     return STATUS_NAME_TO_COLUMN_ID[status];
   }
   
-  // If it's a numeric ID (from new kanban_columns table), keep as is
+
   if (typeof status === 'number' || !isNaN(parseInt(status))) {
     return status;
   }
   
-  // Try to match by lowercasing and removing spaces
+
   const normalized = status.toLowerCase().replace(/\s+/g, '-');
   if (STATUS_NAME_TO_COLUMN_ID[normalized]) {
     return STATUS_NAME_TO_COLUMN_ID[normalized];
   }
   
-  // Default to inbox if no match
+
   console.warn(`Unknown status "${status}", defaulting to inbox`);
   return 'inbox';
 }
@@ -54,7 +54,6 @@ export function useKanbanStatus(userId = null) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Get storage key based on userId
   const getStorageKey = useCallback(() => {
     if (userId) {
       return `${STORAGE_KEY_PREFIX}_${userId}`;
@@ -62,7 +61,6 @@ export function useKanbanStatus(userId = null) {
     return STORAGE_KEY_PREFIX;
   }, [userId]);
 
-  // Load statuses from localStorage
   useEffect(() => {
     try {
       const key = getStorageKey();
@@ -78,7 +76,6 @@ export function useKanbanStatus(userId = null) {
     }
   }, [getStorageKey]);
 
-  // Save statuses to localStorage
   const saveStatuses = useCallback(
     (newStatusMap) => {
       try {
@@ -128,19 +125,14 @@ export function useKanbanStatus(userId = null) {
    */
   const getEmailsByColumn = useCallback(
     (emails, availableColumns = null, currentStatusMap = null) => {
-      // Use currentStatusMap if provided, otherwise fallback to statusMap from closure
       const statusMapToUse = currentStatusMap || statusMap;
-
-      // Initialize columns object with all available columns
       const columns = {};
 
-      // If availableColumns provided, use them; otherwise use default columns
       if (availableColumns && Array.isArray(availableColumns)) {
         availableColumns.forEach((col) => {
           columns[col.id] = [];
         });
       } else {
-        // Default columns for backward compatibility
         columns.inbox = [];
         columns.todo = [];
         columns["in-progress"] = [];
@@ -149,68 +141,37 @@ export function useKanbanStatus(userId = null) {
       }
 
       emails.forEach((email) => {
-        // First check if email is actively snoozed
         if (email.snoozedUntil) {
           const snoozeDate = new Date(email.snoozedUntil);
           const now = new Date();
           if (snoozeDate > now) {
-            // Email is actively snoozed, put in snoozed column
             if (columns["snoozed"]) {
               columns["snoozed"].push(email);
             } else if (columns.snoozed) {
               columns.snoozed.push(email);
-            } else {
-              // If snoozed column doesn't exist, default to inbox
-              if (columns.inbox) {
-                columns.inbox.push(email);
-              }
+            } else if (columns.inbox) {
+              columns.inbox.push(email);
             }
             return;
           }
         }
 
-        // Otherwise, use the stored kanban status
-        // Use currentStatusMap parameter to get the latest value
         const columnId = statusMapToUse[email.id] || "inbox";
 
         if (columns[columnId]) {
           columns[columnId].push(email);
         } else {
-          // Column doesn't exist - this shouldn't happen but handle gracefully
-          console.warn(
-            `[getEmailsByColumn] Column "${columnId}" not found for email ${
-              email.id
-            }, available columns: ${Object.keys(columns).join(
-              ", "
-            )}, falling back to inbox`
-          );
-          // Default to inbox if column doesn't exist
           if (columns.inbox) {
             columns.inbox.push(email);
           } else if (availableColumns && availableColumns.length > 0) {
-            // If no inbox, use first available column
             columns[availableColumns[0].id].push(email);
-          } else {
-            console.error(
-              `[getEmailsByColumn] Email ${email.id} LOST - no valid column found!`
-            );
           }
-        }
-      });
-
-      // Organize emails into columns
-      emails.forEach((email) => {
-        const emailId = email.id;
-        const statusInMap = statusMap[emailId];
-        if (statusInMap) {
-          const expectedCol = statusInMap;
-          // Email is properly organized in its column
         }
       });
 
       return columns;
     },
-    [statusMap] // Depend on statusMap directly, not getEmailStatus
+    [statusMap]
   );
 
   /**
@@ -247,23 +208,17 @@ export function useKanbanStatus(userId = null) {
       try {
         const response = await getBulkEmailStatuses(emailIds);
         if (response.success && response.data) {
-          // Convert array to map, mapping backend status names to frontend column IDs
           const backendStatusMap = {};
           response.data.forEach((status) => {
-            // Map backend status name (e.g., "To Do") to frontend column ID (e.g., "todo")
             backendStatusMap[status.emailId] = mapStatusToColumnId(status.status);
           });
 
-          // Merge with existing statuses (backend takes precedence for these specific emails)
-          // IMPORTANT: Keep statuses for emails NOT in the current batch
-          // Use functional update to get latest statusMap
           setStatusMap((currentStatusMap) => {
             const mergedMap = {
-              ...currentStatusMap, // Keep all existing statuses
-              ...backendStatusMap, // Update only the synced emails
+              ...currentStatusMap,
+              ...backendStatusMap,
             };
 
-            // Save to localStorage
             try {
               const key = getStorageKey();
               localStorage.setItem(key, JSON.stringify(mergedMap));
@@ -288,7 +243,7 @@ export function useKanbanStatus(userId = null) {
         setIsSyncing(false);
       }
     },
-    [getStorageKey] // Remove statusMap and saveStatuses from dependencies
+    [getStorageKey]
   );
 
   /**
@@ -302,8 +257,6 @@ export function useKanbanStatus(userId = null) {
    */
   const updateStatusOnBackend = useCallback(
     async (emailId, columnId, gmailLabelId = null, oldGmailLabelId = null) => {
-      // Optimistic update: update UI immediately
-      // Use functional update to ensure we get the latest statusMap
       setStatusMap((currentStatusMap) => {
         const previousStatus = currentStatusMap[emailId] || "inbox";
         const optimisticMap = {
@@ -311,7 +264,6 @@ export function useKanbanStatus(userId = null) {
           [emailId]: columnId,
         };
 
-        // Save to localStorage immediately
         try {
           const key = getStorageKey();
           localStorage.setItem(key, JSON.stringify(optimisticMap));
@@ -322,7 +274,6 @@ export function useKanbanStatus(userId = null) {
         return optimisticMap;
       });
 
-      // Get previous status for error handling
       const previousStatus = statusMap[emailId] || "inbox";
 
       try {
@@ -335,7 +286,6 @@ export function useKanbanStatus(userId = null) {
         if (response.success) {
           return { success: true };
         } else {
-          // Backend update failed, revert optimistic update
           setStatusMap((currentStatusMap) => {
             const revertedMap = {
               ...currentStatusMap,
@@ -355,7 +305,6 @@ export function useKanbanStatus(userId = null) {
           };
         }
       } catch (error) {
-        // Network error, revert optimistic update
         setStatusMap((currentStatusMap) => {
           const revertedMap = {
             ...currentStatusMap,

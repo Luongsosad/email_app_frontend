@@ -12,7 +12,7 @@ export default function Sidebar({
   mailboxes,
   loading,
 }) {
-  // Map Gmail label IDs to folder keys
+
   const labelToFolderMap = {
     'INBOX': 'inbox',
     'SENT': 'sent',
@@ -25,19 +25,19 @@ export default function Sidebar({
     'UNREAD': 'unread',
   }
 
-  // Get folder config and unread count
+
   const getFolderData = () => {
     const folderData = []
     
     if (mailboxes && mailboxes.length > 0) {
-      // Use real mailboxes from backend
+
       mailboxes.forEach(mailbox => {
         const folderKey = labelToFolderMap[mailbox.id] || mailbox.id.toLowerCase()
         const config = FOLDER_LABELS[folderKey]
         
         if (config) {
           folderData.push({
-            key: mailbox.id, // Use Gmail label ID as key
+            key: mailbox.id,
             label: mailbox.name,
             icon: config.icon,
             unreadCount: mailbox.unreadCount || 0,
@@ -45,16 +45,16 @@ export default function Sidebar({
         }
       })
       
-      // Add snoozed folder (not a Gmail label, handled separately)
+
       const snoozedConfig = FOLDER_LABELS['snoozed']
       folderData.push({
         key: 'snoozed',
         label: snoozedConfig.label,
         icon: snoozedConfig.icon,
-        unreadCount: 0, // Will be updated when snoozed emails are fetched
+        unreadCount: 0,
       })
     } else {
-      // Fallback to default folders if no mailboxes loaded
+
       Object.entries(FOLDER_LABELS).forEach(([key, config]) => {
         folderData.push({
           key: key,
@@ -72,7 +72,7 @@ export default function Sidebar({
 
   return (
     <div className="w-64 md:w-64 max-md:w-full max-md:h-auto max-md:border-r-0 max-md:border-b bg-card border-r border-border flex flex-col overflow-hidden shadow-lg">
-      {/* Logo */}
+
       <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center flex-shrink-0 shadow-md shadow-primary/20 md:transition-transform md:duration-200 md:hover:scale-105">
@@ -82,7 +82,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* Compose Button */}
+
       <div className="px-3 sm:px-4 pt-3 sm:pt-4 pb-2">
         <button
           onClick={onCompose}
@@ -93,7 +93,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Folders */}
+
       <nav className="flex-1 overflow-y-auto px-2 sm:px-3 py-2 space-y-0.5 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -142,7 +142,7 @@ export default function Sidebar({
         )}
       </nav>
 
-      {/* Footer */}
+
       <div className="border-t border-border bg-gradient-to-t from-muted/40 to-muted/20 px-3 sm:px-4 py-3 space-y-1.5">
         <div className="px-2 py-2 rounded-lg bg-background/80 border border-border/50 shadow-sm">
           <p className="text-xs text-muted-foreground mb-0.5">Signed in as</p>
