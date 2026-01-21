@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState } from 'react'
+import { useMemo, useCallback, useEffect, useState, useRef } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { Loader2 } from 'lucide-react'
@@ -47,7 +47,22 @@ export default function KanbanBoard({
     }
   }, [])
 
-  const { getEmailsByColumn, isLoaded, isSyncing, updateStatusOnBackend, statusMap } = useKanbanStatus(userId)
+  const { getEmailsByColumn, isLoaded, isSyncing, updateStatusOnBackend, statusMap, syncWithBackend, setEmailStatus } = useKanbanStatus(userId)
+
+  // Sync statuses with backend when emails change (e.g. initial load or pagination)
+  const lastSyncedIdsRef = useRef('')
+
+  useEffect(() => {
+    if (emails.length > 0) {
+      const emailIds = emails.map(e => e.id)
+      const idsKey = JSON.stringify(emailIds)
+      
+      if (lastSyncedIdsRef.current !== idsKey) {
+        lastSyncedIdsRef.current = idsKey
+        syncWithBackend(emailIds)
+      }
+    }
+  }, [emails, syncWithBackend])
 
   const {
     sortBy,
@@ -120,16 +135,18 @@ export default function KanbanBoard({
         const snoozeDate = new Date()
         snoozeDate.setHours(snoozeDate.getHours() + 6)
         
+        // Optimistically update UI
+        setEmailStatus(emailId, 'snoozed')
+        
+        toast({
+          title: 'Email snoozed',
+          description: 'Email will reappear in 6 hours',
+        })
+
         const result = await emailApi.snoozeEmail(emailId, snoozeDate)
-        if (result.success) {
-          toast({
-            title: 'Email snoozed',
-            description: 'Email will reappear in 6 hours',
-          })
-          if (onRefresh) {
-            onRefresh()
-          }
-        } else {
+        if (!result.success) {
+          // Revert on failure
+          setEmailStatus(emailId, sourceColumnId)
           toast({
             title: 'Error',
             description: result.error || 'Failed to snooze email',
@@ -137,6 +154,7 @@ export default function KanbanBoard({
           })
         }
       } catch (error) {
+        setEmailStatus(emailId, sourceColumnId)
         toast({
           title: 'Error',
           description: 'Failed to snooze email',
