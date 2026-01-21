@@ -207,10 +207,14 @@ export function useKanbanStatus(userId = null) {
       setIsSyncing(true);
       try {
         const response = await getBulkEmailStatuses(emailIds);
+        
         if (response.success && response.data) {
           const backendStatusMap = {};
           response.data.forEach((status) => {
-            backendStatusMap[status.emailId] = mapStatusToColumnId(status.status);
+            // Prefer using the explicit column ID if available
+            // This handles custom columns correctly where name mapping might be ambiguous
+            const columnIdentifier = status.kanbanColumnId || status.status;
+            backendStatusMap[status.emailId] = mapStatusToColumnId(columnIdentifier);
           });
 
           setStatusMap((currentStatusMap) => {
