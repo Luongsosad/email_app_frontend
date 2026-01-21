@@ -53,6 +53,14 @@ export default function Sidebar({
         icon: snoozedConfig.icon,
         unreadCount: 0,
       })
+
+      const allMailConfig = FOLDER_LABELS['all_mail']
+      folderData.push({
+        key: 'ALL_MAIL',
+        label: allMailConfig.label,
+        icon: allMailConfig.icon,
+        unreadCount: 0,
+      })
     } else {
 
       Object.entries(FOLDER_LABELS).forEach(([key, config]) => {

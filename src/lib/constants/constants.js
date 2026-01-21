@@ -1,5 +1,5 @@
 // Application constants
-import { Mail, Send, FileText, AlertCircle, Trash2, Archive, MessageSquare, Star, Bookmark, MailOpen, Clock } from 'lucide-react'
+import { Mail, Send, FileText, AlertCircle, Trash2, Archive, MessageSquare, Star, Bookmark, MailOpen, Clock, Library } from 'lucide-react'
 
 export const EMAIL_FOLDERS = ['inbox', 'sent', 'drafts', 'spam', 'trash', 'archive', 'chat', 'starred', 'important', 'unread', 'snoozed']
 
@@ -15,6 +15,7 @@ export const FOLDER_LABELS = {
   important: { label: 'Important', icon: Bookmark, color: 'text-pink-600' },
   unread: { label: 'Unread', icon: MailOpen, color: 'text-cyan-600' },
   snoozed: { label: 'Snoozed', icon: Clock, color: 'text-amber-600' },
+  all_mail: { label: 'All Mail', icon: Library, color: 'text-indigo-600' },
 }
 
 export const FORMATTING_OPTIONS = [
