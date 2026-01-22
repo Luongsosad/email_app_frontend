@@ -49,7 +49,14 @@ export default function AttachmentPreviewModal({
 
     try {
       const blob = await fetchAttachmentBlob(messageId, attachment.id)
-      const url = URL.createObjectURL(blob)
+      
+      // For PDFs, ensure the blob has the correct MIME type
+      let finalBlob = blob
+      if (fileType?.type === 'pdf' && blob.type !== 'application/pdf') {
+        finalBlob = new Blob([blob], { type: 'application/pdf' })
+      }
+      
+      const url = URL.createObjectURL(finalBlob)
       setPreviewUrl(url)
 
       // If text file, also load text content
@@ -114,13 +121,21 @@ export default function AttachmentPreviewModal({
 
       case 'pdf':
         return (
-          <div className="w-full h-[70vh] border border-border rounded-lg overflow-hidden">
-            <iframe
-              src={previewUrl}
+          <div className="w-full h-[70vh] border border-border rounded-lg overflow-hidden bg-muted/10">
+            <embed
+              src={`${previewUrl}#toolbar=0`}
+              type="application/pdf"
               className="w-full h-full"
               title={attachment.name}
-              onError={() => setError('Failed to load PDF')}
             />
+            {/* Fallback iframe for browsers that don't support embed */}
+            <noscript>
+              <iframe
+                src={`${previewUrl}#toolbar=0`}
+                className="w-full h-full"
+                title={attachment.name}
+              />
+            </noscript>
           </div>
         )
 
@@ -234,15 +249,6 @@ export default function AttachmentPreviewModal({
                 title="Download"
               >
                 <Download size={16} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="h-8 w-8 p-0"
-                title="Close"
-              >
-                <X size={16} />
               </Button>
             </div>
           </div>
