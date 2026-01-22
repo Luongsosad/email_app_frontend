@@ -135,8 +135,14 @@ export default function KanbanBoard({
         const snoozeDate = new Date()
         snoozeDate.setHours(snoozeDate.getHours() + 6)
         
-        // Optimistically update UI
+        // Optimistically update UI with status AND snoozedUntil time
         setEmailStatus(emailId, 'snoozed')
+        
+        // Update emails state to include snoozedUntil for display on card
+        if (onEmailMoved) {
+          // Trigger parent to update email with snoozedUntil
+          onEmailMoved(emailId, snoozeDate)
+        }
         
         toast({
           title: 'Email snoozed',
@@ -147,6 +153,9 @@ export default function KanbanBoard({
         if (!result.success) {
           // Revert on failure
           setEmailStatus(emailId, sourceColumnId)
+          if (onEmailMoved) {
+            onEmailMoved(emailId, null) // Clear snoozedUntil
+          }
           toast({
             title: 'Error',
             description: result.error || 'Failed to snooze email',
@@ -155,6 +164,9 @@ export default function KanbanBoard({
         }
       } catch (error) {
         setEmailStatus(emailId, sourceColumnId)
+        if (onEmailMoved) {
+          onEmailMoved(emailId, null)
+        }
         toast({
           title: 'Error',
           description: 'Failed to snooze email',

@@ -333,7 +333,20 @@ export default function DashboardPage({ user, onLogout }) {
   }, [markAsRead, fetchEmailDetail])
 
   // Handle email moved in Kanban - fetch email detail if not in array
-  const handleEmailMoved = useCallback(async (emailId) => {
+  const handleEmailMoved = useCallback(async (emailId, snoozedUntil = undefined) => {
+    // If snoozedUntil is provided (from drag to Snooze), update existing email
+    if (snoozedUntil !== undefined) {
+      setEmails(prevEmails =>
+        prevEmails.map(email =>
+          email.id === emailId
+            ? { ...email, snoozedUntil: snoozedUntil }
+            : email
+        )
+      )
+      return
+    }
+
+    // Otherwise, fetch email detail if not in array (original behavior)
     try {
       const result = await fetchEmailDetail(emailId)
       if (result.success && result.data) {
